@@ -1,199 +1,211 @@
-const searchInput = document.getElementById("searchInput");
-const searchResults = document.getElementById("searchResults");
-const tempDisplay = document.getElementById("tempDisplay");
-const weatherIcon = document.getElementById("weatherIcon");
-const conditionLabel = document.getElementById("conditionLabel");
-const windDisplay = document.getElementById("windDisplay");
-const cityDisplay = document.getElementById("cityDisplay");
-const timeDisplay = document.getElementById("timeDisplay");
-const dateDisplay = document.getElementById("dateDisplay");
-const hourlyBar = document.getElementById("hourlyBar");
-const forecastList = document.getElementById("forecastList");
-const loading = document.getElementById("loading");
-const weatherContent = document.getElementById("weatherContent");
+document.addEventListener("DOMContentLoaded", () => {
+  // Initialize Icons safely
+  if (typeof feather !== 'undefined') {
+    feather.replace();
+  }
 
-let currentTimeZone; // undefined = browser time until the first fetch finishes
-let searchTimer;
-let searchToken = 0;
-let lastResults = [];
+  // DOM Elements Safely Selected
+  const searchInput = document.getElementById("searchInput");
+  const searchWrapper = document.getElementById("searchWrapper");
+  const searchResults = document.getElementById("searchResults");
+  const focusOverlay = document.getElementById("focusOverlay");
+  const dashboard = document.getElementById("dashboard");
+  const globalLoader = document.getElementById("globalLoader");
 
-function getWeatherDetails(code) {
-  if (code === 0) return { label: "Clear Sky", icon: "☀️" };
-  if (code === 1 || code === 2) return { label: "Partly Cloudy", icon: "⛅" };
-  if (code === 3) return { label: "Cloudy", icon: "☁️" };
-  if (code === 45 || code === 48) return { label: "Foggy", icon: "🌫️" };
-  if ([51, 53, 55, 56, 57].includes(code)) return { label: "Drizzle", icon: "🌦️" };
-  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return { label: "Rainy", icon: "🌧️" };
-  if ([71, 73, 75, 77, 85, 86].includes(code)) return { label: "Snowy", icon: "❄️" };
-  if ([95, 96, 99].includes(code)) return { label: "Thunderstorm", icon: "🌩️" };
-  return { label: "Clear", icon: "☀️" };
-}
+  // Helper to close search smoothly
+  function closeSearch() {
+    if (!searchWrapper || !focusOverlay || !dashboard || !searchResults || !searchInput) return;
 
-// +18 / 0 / -3
-function fmtTemp(value) {
-  const rounded = Math.round(value);
-  return rounded > 0 ? `+${rounded}` : `${rounded}`;
-}
+    searchWrapper.classList.remove("active");
+    focusOverlay.classList.remove("active");
+    dashboard.classList.remove("blur-bg");
 
-function updateClock() {
-  const now = new Date();
-  const tz = currentTimeZone ? { timeZone: currentTimeZone } : {};
-  timeDisplay.innerText = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", ...tz });
-  dateDisplay.innerText = now.toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric", ...tz });
-}
-setInterval(updateClock, 1000);
-updateClock();
+    // Wait for collapse animation before clearing content
+    setTimeout(() => {
+      searchResults.innerHTML = "";
+      searchResults.classList.remove("has-data");
+      searchInput.value = "";
+    }, 400);
+  }
 
-async function fetchWeather(lat, lon, cityName) {
-  loading.textContent = "Fetching Weather Data...";
-  loading.classList.remove("hidden");
-  weatherContent.classList.add("hidden");
+  // =========================================
+  // LIQUID SEARCH ANIMATION LOGIC
+  // =========================================
+  if (searchInput && searchWrapper && focusOverlay && dashboard) {
+    searchInput.addEventListener("focus", () => {
+      searchWrapper.classList.add("active");
+      focusOverlay.classList.add("active");
+      dashboard.classList.add("blur-bg");
+    });
 
-  try {
-    const res = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
-      `&current_weather=true&hourly=temperature_2m,weathercode` +
-      `&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto`
-    );
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    // Close search when clicking outside
+    focusOverlay.addEventListener("click", closeSearch);
+  }
 
-    // clock follows the searched city
-    currentTimeZone = data.timezone;
-    updateClock();
-
-    // current temp card
-    const current = data.current_weather;
-    const details = getWeatherDetails(current.weathercode);
-    const todayMax = fmtTemp(data.daily.temperature_2m_max[0]);
-    const todayMin = fmtTemp(data.daily.temperature_2m_min[0]);
-
-    tempDisplay.innerText = `${fmtTemp(current.temperature)}°C`;
-    weatherIcon.innerText = details.icon;
-    conditionLabel.innerText = `${details.label} ${todayMax}°/${todayMin}°`;
-    windDisplay.innerText = `${current.windspeed} km/h`;
-    cityDisplay.innerText = cityName;
-
-    // top bar: next 6 hours starting at the current hour
-    const nowHour = current.time.slice(0, 13); // "2026-10-09T17"
-    let start = data.hourly.time.findIndex((t) => t.startsWith(nowHour));
-    if (start < 0) start = 0;
-
-    let hourlyHTML = "";
-    for (let i = start; i < start + 6 && i < data.hourly.time.length; i++) {
-      const hourDetails = getWeatherDetails(data.hourly.weathercode[i]);
-      hourlyHTML += `
-        <div class="hourly-item">
-          <span>${data.hourly.time[i].slice(11, 16)}</span>
-          <span>${hourDetails.icon}</span>
-          <strong>${fmtTemp(data.hourly.temperature_2m[i])}°</strong>
-        </div>
-      `;
+  // =========================================
+  // WEATHER API LOGIC
+  // =========================================
+  function getWeatherDetails(code) {
+    switch (code) {
+      case 0: return { label: "Clear Sky", icon: "sun" };
+      case 1:
+      case 2:
+      case 3: return { label: "Partly Cloudy", icon: "cloud" };
+      case 45:
+      case 48: return { label: "Foggy", icon: "align-center" };
+      case 51:
+      case 53:
+      case 55: return { label: "Drizzle", icon: "cloud-drizzle" };
+      case 61:
+      case 63:
+      case 65: return { label: "Rain Showers", icon: "cloud-rain" };
+      case 71:
+      case 73:
+      case 75: return { label: "Snow", icon: "cloud-snow" };
+      case 95:
+      case 96:
+      case 99: return { label: "Thunderstorm", icon: "cloud-lightning" };
+      default: return { label: "Clear", icon: "sun" };
     }
-    hourlyBar.innerHTML = hourlyHTML;
-
-    // 7-day forecast
-    forecastList.innerHTML = data.daily.time
-      .map((dateStr, idx) => {
-        const dateFormatted = new Date(`${dateStr}T00:00:00`).toLocaleDateString("en-US", {
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-        });
-        const dayDetails = getWeatherDetails(data.daily.weathercode[idx]);
-        const max = fmtTemp(data.daily.temperature_2m_max[idx]);
-        const min = fmtTemp(data.daily.temperature_2m_min[idx]);
-
-        return `
-          <div class="forecast-row">
-            <span class="forecast-day">
-              <span class="forecast-icon">${dayDetails.icon}</span>
-              <span>${dateFormatted}</span>
-            </span>
-            <span class="forecast-label">${dayDetails.label}</span>
-            <strong class="forecast-temps">${max}° / ${min}°</strong>
-          </div>
-        `;
-      })
-      .join("");
-
-    loading.classList.add("hidden");
-    weatherContent.classList.remove("hidden");
-  } catch (err) {
-    console.error(err);
-    loading.textContent = "Couldn't load weather data. Check your connection and try again.";
-    loading.classList.remove("hidden");
   }
-}
 
-/* ---------- Search ---------- */
+  // Fetch Full Weather Data
+  async function fetchWeather(lat, lon, cityName) {
+    // 1. Trigger search close smoothly
+    closeSearch();
 
-function clearResults() {
-  searchToken++; // drop any in-flight search
-  lastResults = [];
-  searchResults.innerHTML = "";
-}
+    // 2. Trigger smooth fade out animation for dashboard
+    if (dashboard) dashboard.classList.add("updating");
 
-function selectCity(city) {
-  fetchWeather(city.latitude, city.longitude, city.name);
-  clearResults();
-  searchInput.value = "";
-  searchInput.blur();
-}
+    // Initial load fallback (if no data exists yet)
+    const tempElement = document.getElementById("mainTemp");
+    if (tempElement && tempElement.textContent === "32°" && cityName === "Lahore") {
+      if (globalLoader) globalLoader.classList.remove("hidden");
+    }
 
-function renderResults(results) {
-  searchResults.innerHTML = "";
-  lastResults = results;
+    try {
+      // Advanced endpoint fetching current extended metrics + daily forecast
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`;
+      const res = await fetch(url);
+      const data = await res.json();
 
-  results.forEach((city) => {
-    const item = document.createElement("div");
-    item.className = "dropdown-item";
+      const current = data.current;
+      const details = getWeatherDetails(current.weather_code);
 
-    const name = document.createElement("span");
-    name.textContent = city.admin1 ? `${city.name}, ${city.admin1}` : city.name;
+      // Give the fade-out animation a tiny moment to finish before swapping data
+      setTimeout(() => {
+        // Update UI Safely using textContent
+        const elCityName = document.getElementById("headerCityName");
+        if (elCityName) elCityName.textContent = cityName;
 
-    const country = document.createElement("small");
-    country.textContent = city.country || "";
+        const elMainTemp = document.getElementById("mainTemp");
+        if (elMainTemp) elMainTemp.textContent = `${Math.round(current.temperature_2m)}°`;
 
-    item.append(name, country);
-    item.addEventListener("click", () => selectCity(city));
-    searchResults.appendChild(item);
-  });
-}
+        const elCondition = document.getElementById("conditionDesc");
+        if (elCondition) elCondition.textContent = details.label;
 
-async function searchCities(query) {
-  const token = ++searchToken;
+        const elWind = document.getElementById("windSpeed");
+        if (elWind) elWind.textContent = `${current.wind_speed_10m} km/h`;
 
-  try {
-    const res = await fetch(
-      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`
-    );
-    const data = await res.json();
-    if (token !== searchToken) return; // a newer search replaced this one
-    renderResults(data.results || []);
-  } catch (err) {
-    console.error(err);
+        const elHumidity = document.getElementById("humidity");
+        if (elHumidity) elHumidity.textContent = `${current.relative_humidity_2m}%`;
+
+        const elFeelsLike = document.getElementById("feelsLike");
+        if (elFeelsLike) elFeelsLike.textContent = `${Math.round(current.apparent_temperature)}°`;
+
+        // Update Main Icon safely
+        const mainIcon = document.getElementById("mainIcon");
+        if (mainIcon && mainIcon.parentNode) {
+          mainIcon.parentNode.innerHTML = `<i data-feather="${details.icon}" class="weather-icon-large" id="mainIcon"></i>`;
+        }
+
+        // Populate 7-Day Forecast safely
+        const forecastList = document.getElementById("forecastList");
+        if (forecastList) {
+          forecastList.innerHTML = "";
+
+          data.daily.time.forEach((dateStr, idx) => {
+            const dayName = idx === 0 ? "Today" : new Date(dateStr).toLocaleDateString("en-US", { weekday: "short" });
+            const dayDetails = getWeatherDetails(data.daily.weather_code[idx]);
+            const max = Math.round(data.daily.temperature_2m_max[idx]);
+            const min = Math.round(data.daily.temperature_2m_min[idx]);
+
+            forecastList.innerHTML += `
+              <div class="forecast-item">
+                <span class="f-day">${dayName}</span>
+                <div class="f-cond">
+                  <i data-feather="${dayDetails.icon}" style="width: 18px; height: 18px;"></i>
+                  <span>${dayDetails.label}</span>
+                </div>
+                <div class="f-temps">${max}° <span>/ ${min}°</span></div>
+              </div>
+            `;
+          });
+        }
+
+        // Re-render new feather icons
+        if (typeof feather !== 'undefined') feather.replace();
+
+        // 3. Fade the dashboard back in
+        if (dashboard) dashboard.classList.remove("updating");
+        if (globalLoader) globalLoader.classList.add("hidden");
+      }, 400); // 400ms delay matches the CSS transition time
+
+    } catch (err) {
+      console.error("Atmosphere fetch failed.", err);
+      if (dashboard) dashboard.classList.remove("updating");
+      if (globalLoader) globalLoader.classList.add("hidden");
+    }
   }
-}
 
-searchInput.addEventListener("input", (e) => {
-  clearTimeout(searchTimer);
-  const query = e.target.value.trim();
+  // Geocoding Autocomplete Search
+  let searchTimeout;
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      const query = e.target.value.trim();
+      clearTimeout(searchTimeout);
 
-  if (query.length < 3) {
-    clearResults();
-    return;
+      if (query.length < 3) {
+        if (searchResults) {
+          searchResults.classList.remove("has-data");
+          searchResults.innerHTML = "";
+        }
+        return;
+      }
+
+      // Debounce API calls slightly
+      searchTimeout = setTimeout(async () => {
+        try {
+          const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`);
+          const data = await res.json();
+
+          if (searchResults) {
+            searchResults.innerHTML = "";
+
+            if (data.results && data.results.length > 0) {
+              data.results.forEach(city => {
+                const item = document.createElement("div");
+                item.className = "dropdown-item";
+                item.innerHTML = `
+                  <span class="dropdown-city">${city.name}</span>
+                  <span class="dropdown-country">${city.country}</span>
+                `;
+                item.onclick = () => fetchWeather(city.latitude, city.longitude, city.name);
+                searchResults.appendChild(item);
+              });
+              searchResults.classList.add("has-data");
+            } else {
+              searchResults.classList.remove("has-data");
+            }
+          }
+        } catch (error) {
+          console.error(error);
+        }
+      }, 300);
+    });
   }
-  searchTimer = setTimeout(() => searchCities(query), 300);
-});
 
-searchInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && lastResults.length) selectCity(lastResults[0]);
-  if (e.key === "Escape") clearResults();
-});
+  // Initialize default location (Lahore)
+  fetchWeather(31.5204, 74.3587, "Lahore");
 
-document.addEventListener("click", (e) => {
-  if (!e.target.closest(".search-box")) clearResults();
 });
-
-fetchWeather(31.5204, 74.3587, "Lahore");
