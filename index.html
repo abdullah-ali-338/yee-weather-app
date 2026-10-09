@@ -2,8 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="YeeWeather: live weather for any city in the world.">
+  <meta name="theme-color" content="#020617">
   <title>YeeWeather | Liquid Glass</title>
+
+  <!-- Favicon (inline SVG, no extra file needed) -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Cdefs%3E%3ClinearGradient%20id='g'%20x1='0'%20y1='0'%20x2='1'%20y2='1'%3E%3Cstop%20offset='0'%20stop-color='%233b82f6'/%3E%3Cstop%20offset='1'%20stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width='64'%20height='64'%20rx='16'%20fill='url(%23g)'/%3E%3Ccircle%20cx='32'%20cy='30'%20r='12'%20fill='%23ffffff'/%3E%3Cpath%20d='M32%206v6M32%2048v6M10%2030H4M60%2030h-6M16%2014l4%204M44%2042l4%204M16%2046l4-4M44%2018l4-4'%20stroke='%23ffffff'%20stroke-width='3'%20stroke-linecap='round'/%3E%3C/svg%3E">
 
   <!-- Inter Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -35,55 +40,82 @@
 
   <!-- Top Navigation -->
   <nav class="navbar">
-    <div class="nav-left">
-      <div class="brand">YeeWeather</div>
-    </div>
+    <div class="brand">YeeWeather</div>
+    <p class="tagline">Live weather, anywhere</p>
   </nav>
 
   <!-- Liquid Animated Search Bar -->
-  <div class="search-wrapper" id="searchWrapper">
+  <div class="search-wrapper" id="searchWrapper" aria-expanded="false">
     <div class="search-box">
       <i data-feather="search"></i>
-      <input type="text" id="searchInput" placeholder="Search cities globally..." autocomplete="off">
+      <input
+        type="text"
+        id="searchInput"
+        placeholder="Search cities globally..."
+        autocomplete="off"
+        aria-label="Search for a city"
+        aria-controls="searchResults"
+      >
     </div>
-    <div class="dropdown glass" id="searchResults"></div>
+    <div class="dropdown glass" id="searchResults" role="listbox"></div>
   </div>
 
   <!-- Main Weather Dashboard -->
   <main class="dashboard" id="dashboard">
 
+    <!-- Toolbar: status + actions -->
+    <div class="toolbar">
+      <div class="status" id="statusText" aria-live="polite">Loading...</div>
+      <div class="toolbar-actions">
+        <button class="pill-btn" id="locateBtn" type="button" title="Use my location">
+          <i data-feather="navigation"></i>
+          <span>My location</span>
+        </button>
+        <button class="pill-btn icon-only" id="refreshBtn" type="button" aria-label="Refresh weather">
+          <i data-feather="refresh-cw"></i>
+        </button>
+        <div class="unit-toggle" role="group" aria-label="Units">
+          <button class="unit-btn active" data-unit="metric" type="button" aria-pressed="true">°C</button>
+          <button class="unit-btn" data-unit="imperial" type="button" aria-pressed="false">°F</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Left Column: Current & Metrics -->
     <div class="col-left">
 
-      <!-- Current Status -->
-      <div class="current-card glass">
+      <section class="current-card glass">
         <div class="current-header">
-          <i data-feather="sun" class="weather-icon-large" id="mainIcon"></i>
-          <div class="card-city"><i data-feather="map-pin"></i> <span id="headerCityName">Lahore</span></div>
+          <div class="weather-icon-wrap" id="mainIconWrap">
+            <i data-feather="sun" class="weather-icon-large"></i>
+          </div>
+          <div class="card-city">
+            <i data-feather="map-pin"></i>
+            <span id="headerCityName">Lahore</span>
+          </div>
         </div>
 
         <div class="current-body">
-          <div class="temp-main" id="mainTemp">32°</div>
-          <div class="condition-text" id="conditionDesc">Clear Sky</div>
+          <div class="temp-main" id="mainTemp">--°</div>
+          <div class="condition-text" id="conditionDesc">Loading...</div>
         </div>
-      </div>
+      </section>
 
-      <!-- Detail Metrics Grid -->
       <div class="metrics-grid">
         <div class="metric-card glass">
           <i data-feather="wind" class="metric-icon"></i>
           <span class="metric-label">Wind Speed</span>
-          <span class="metric-value" id="windSpeed">12 km/h</span>
+          <span class="metric-value" id="windSpeed">--</span>
         </div>
         <div class="metric-card glass">
           <i data-feather="droplet" class="metric-icon"></i>
           <span class="metric-label">Humidity</span>
-          <span class="metric-value" id="humidity">45%</span>
+          <span class="metric-value" id="humidity">--</span>
         </div>
         <div class="metric-card glass">
           <i data-feather="thermometer" class="metric-icon"></i>
           <span class="metric-label">Feels Like</span>
-          <span class="metric-value" id="feelsLike">34°</span>
+          <span class="metric-value" id="feelsLike">--</span>
         </div>
       </div>
 
@@ -92,14 +124,14 @@
     <!-- Right Column: Forecast -->
     <div class="col-right">
 
-      <div class="forecast-card glass">
+      <section class="forecast-card glass">
         <h3 class="section-title">
           <i data-feather="calendar"></i> 7-Day Forecast
         </h3>
         <div class="forecast-list" id="forecastList">
-          <!-- JS will inject forecast rows here -->
+          <!-- JS injects forecast rows here -->
         </div>
-      </div>
+      </section>
 
     </div>
 
