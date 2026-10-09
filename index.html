@@ -3,68 +3,109 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Weather Dashboard</title>
+  <title>YeeWeather | Liquid Glass</title>
+
+  <!-- Inter Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Feather Icons -->
+  <script src="https://unpkg.com/feather-icons"></script>
+
+  <!-- Styles -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <main class="container">
+  <!-- Live Liquid Background -->
+  <div class="bg-animation"></div>
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
 
-    <!-- Search Bar -->
-    <div class="search-box">
-      <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="11" cy="11" r="7"></circle>
-        <line x1="16.5" y1="16.5" x2="21" y2="21"></line>
-      </svg>
-      <input type="text" id="searchInput" placeholder="Search city..." autocomplete="off" aria-label="Search city">
-      <div id="searchResults" class="dropdown"></div>
+  <!-- Focus Overlay for Search Animation -->
+  <div class="focus-overlay" id="focusOverlay"></div>
+
+  <!-- Global Loader -->
+  <div class="global-loader" id="globalLoader">
+    <div class="spinner"></div>
+    <p>Summoning atmosphere...</p>
+  </div>
+
+  <!-- Top Navigation -->
+  <nav class="navbar">
+    <div class="nav-left">
+      <div class="brand">YeeWeather</div>
     </div>
+  </nav>
 
-    <div id="loading" class="loading hidden">Fetching Weather Data...</div>
+  <!-- Liquid Animated Search Bar -->
+  <div class="search-wrapper" id="searchWrapper">
+    <div class="search-box">
+      <i data-feather="search"></i>
+      <input type="text" id="searchInput" placeholder="Search cities globally..." autocomplete="off">
+    </div>
+    <div class="dropdown glass" id="searchResults"></div>
+  </div>
 
-    <div id="weatherContent" class="weather-content">
+  <!-- Main Weather Dashboard -->
+  <main class="dashboard" id="dashboard">
 
-      <!-- Top Hourly Forecast Bar -->
-      <div class="glass-card hourly-bar" id="hourlyBar"></div>
+    <!-- Left Column: Current & Metrics -->
+    <div class="col-left">
 
-      <!-- Middle Grid -->
-      <div class="middle-grid">
-
-        <!-- Temp Card -->
-        <div class="glass-card card">
-          <div class="card-top">
-            <h1 id="tempDisplay">+0°C</h1>
-            <span id="weatherIcon" class="main-icon">☀️</span>
-          </div>
-          <p id="conditionLabel" class="condition">Clear Sky</p>
-          <div class="card-bottom">
-            <span>💨 Wind: <strong id="windDisplay">0 km/h</strong></span>
-          </div>
+      <!-- Current Status -->
+      <div class="current-card glass">
+        <div class="current-header">
+          <i data-feather="sun" class="weather-icon-large" id="mainIcon"></i>
+          <div class="card-city"><i data-feather="map-pin"></i> <span id="headerCityName">Lahore</span></div>
         </div>
 
-        <!-- Time & Location Card -->
-        <div class="glass-card card">
-          <div>
-            <h2 id="timeDisplay" class="time-text">--:--</h2>
-            <p id="dateDisplay" class="date-text">Loading date...</p>
-          </div>
-          <div class="location-badge">
-            📍 <span id="cityDisplay">Lahore</span>
-          </div>
+        <div class="current-body">
+          <div class="temp-main" id="mainTemp">32°</div>
+          <div class="condition-text" id="conditionDesc">Clear Sky</div>
         </div>
-
       </div>
 
-      <!-- Bottom 7-Day Forecast -->
-      <div class="glass-card forecast-card">
-        <h3>7-Day Forecast</h3>
-        <div id="forecastList" class="forecast-list"></div>
+      <!-- Detail Metrics Grid -->
+      <div class="metrics-grid">
+        <div class="metric-card glass">
+          <i data-feather="wind" class="metric-icon"></i>
+          <span class="metric-label">Wind Speed</span>
+          <span class="metric-value" id="windSpeed">12 km/h</span>
+        </div>
+        <div class="metric-card glass">
+          <i data-feather="droplet" class="metric-icon"></i>
+          <span class="metric-label">Humidity</span>
+          <span class="metric-value" id="humidity">45%</span>
+        </div>
+        <div class="metric-card glass">
+          <i data-feather="thermometer" class="metric-icon"></i>
+          <span class="metric-label">Feels Like</span>
+          <span class="metric-value" id="feelsLike">34°</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Forecast -->
+    <div class="col-right">
+
+      <div class="forecast-card glass">
+        <h3 class="section-title">
+          <i data-feather="calendar"></i> 7-Day Forecast
+        </h3>
+        <div class="forecast-list" id="forecastList">
+          <!-- JS will inject forecast rows here -->
+        </div>
       </div>
 
     </div>
 
   </main>
 
+  <!-- Logic & Interactions -->
   <script src="script.js"></script>
 </body>
 </html>
