@@ -1,12 +1,3 @@
-// Screen par JS errors dikhao taake page "Loading" par atka na rahe
-window.addEventListener("error", (e) => {
-  const s = document.getElementById("statusText");
-  if (s) {
-    s.textContent = "JS error: " + e.message;
-    s.classList.add("is-error");
-  }
-});
-
 document.addEventListener("DOMContentLoaded", () => {
   const $ = (id) => document.getElementById(id);
 
@@ -23,7 +14,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Config & state
   const CLOSE_MS = 400;
-  const REQUEST_TIMEOUT_MS = 12000;
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   let unit = "metric";
@@ -51,23 +41,12 @@ document.addEventListener("DOMContentLoaded", () => {
     new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   const isSearchOpen = () => searchWrapper.classList.contains("active");
 
-  // fetch with timeout, so requests never hang forever
-  async function fetchWithTimeout(url, ms = REQUEST_TIMEOUT_MS) {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), ms);
-    try {
-      return await fetch(url, { signal: ctrl.signal });
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-
   function setStatus(message, isError = false) {
     statusText.textContent = message;
     statusText.classList.toggle("is-error", isError);
   }
 
-  // Weather code -> label, icon, background mood
+  // Maps Open-Meteo weather codes to a label, icon, and background mood
   function describe(code, isDay = 1) {
     const night = !isDay;
     if (code === 0) return { label: "Clear sky", icon: night ? "moon" : "sun", mood: night ? "night" : "clear" };
@@ -80,6 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return { label: "Cloudy", icon: "cloud", mood: "cloud" };
   }
 
+  // Plain-language one-liner built from the data
   function summarize(tempC, info, humidity, windKmh) {
     const word =
       tempC <= 0 ? "Freezing" :
@@ -93,6 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return text + ".";
   }
 
+  // Counts the temperature up or down instead of snapping
   function countTo(el, to) {
     const from = parseFloat(el.dataset.value);
     el.dataset.value = to;
@@ -220,7 +201,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const token = ++searchToken;
     try {
       const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=6&language=en&format=json`;
-      const res = await fetchWithTimeout(url);
+      const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (token !== searchToken) return;
@@ -272,65 +253,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================================
-  // LOCATION
-  // =========================================
-  // Coordinates -> city name (free, no API key)
-  async function reverseGeocode(lat, lon) {
-    try {
-      const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`;
-      const res = await fetchWithTimeout(url, 5000);
-      if (!res.ok) return null;
-      const d = await res.json();
-      return d.city || d.locality || d.principalSubdivision || null;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  function showWelcome(message = "Search a city to see the weather.") {
-    dashboard.classList.remove("is-loading", "updating");
-    setText("headerCityName", "No location");
-    setText("localTime", "");
-    setText("mainTemp", "--°");
-    setText("conditionDesc", "Pick a city");
-    setText("summary", message);
-    setText("hilo", "");
-    $("mainIconWrap").innerHTML = `<i data-feather="map-pin" class="weather-icon-large"></i>`;
-    $("forecastList").innerHTML = `<p class="empty-msg">Search a city to load the forecast.</p>`;
-    $("hourlyList").innerHTML = `<p class="empty-msg">Search a city to load hourly data.</p>`;
-    refreshIcons();
-  }
-
-  function useMyLocation() {
-    if (!navigator.geolocation) {
-      setStatus("Location isn't supported here. Search a city.", true);
-      if (!current) showWelcome("Location isn't supported. Search a city.");
-      return;
-    }
-
-    setStatus("Finding you...");
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
-        const name = (await reverseGeocode(lat, lon)) || "My Location";
-        loadWeather({ lat, lon, name });
-      },
-      (err) => {
-        const msg = err.code === 1
-          ? "Location access denied. Search a city instead."
-          : "Couldn't get your location. Search a city instead.";
-        setStatus(msg, true);
-        if (!current) showWelcome(msg);
-      },
-      { timeout: 10000, maximumAge: 300000 }
-    );
-  }
-
-  locateBtn.addEventListener("click", useMyLocation);
-
-  // =========================================
-  // WEATHER DATA
+  // LOADING STATES
   // =========================================
   function showSkeleton() {
     $("forecastList").innerHTML = Array.from({ length: 7 }, () => `<div class="forecast-item sk"></div>`).join("");
@@ -346,6 +269,9 @@ document.addEventListener("DOMContentLoaded", () => {
     refreshIcons();
   }
 
+  // =========================================
+  // WEATHER DATA
+  // =========================================
   async function loadWeather({ lat, lon, name }) {
     const token = ++weatherToken;
 
@@ -360,7 +286,7 @@ document.addEventListener("DOMContentLoaded", () => {
       `&timezone=auto&forecast_days=7`;
 
     try {
-      const [res] = await Promise.all([fetchWithTimeout(url), delay(400)]);
+      const [res] = await Promise.all([fetch(url), delay(400)]);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (token !== weatherToken) return;
@@ -370,7 +296,7 @@ document.addEventListener("DOMContentLoaded", () => {
       setStatus(`Updated ${timeNow()}`);
       setText("footerUpdated", `Updated ${timeNow()}`);
     } catch (err) {
-      console.error("Weather fetch failed:", err);
+      console.error("Atmosphere fetch failed.", err);
       if (token === weatherToken) {
         if (!current) showError();
         setStatus("Couldn't load weather. Hit refresh to retry.", true);
@@ -388,4 +314,159 @@ document.addEventListener("DOMContentLoaded", () => {
   function render() {
     if (!current) return;
 
-    const { name, data } =
+    const { name, data } = current;
+    const imperial = unit === "imperial";
+    const toTemp = (c) => Math.round(imperial ? (c * 9) / 5 + 32 : c);
+    const toWind = (kmh) => Math.round(imperial ? kmh / 1.609 : kmh);
+
+    const cur = data.current;
+    const daily = data.daily;
+    const info = describe(cur.weather_code, cur.is_day);
+
+    // Background mood follows the weather
+    document.body.dataset.mood = info.mood;
+
+    setText("headerCityName", name);
+    setLocalTime(data);
+
+    countTo($("mainTemp"), toTemp(cur.temperature_2m));
+    setText("conditionDesc", info.label);
+    setText("summary", summarize(cur.temperature_2m, info, cur.relative_humidity_2m, cur.wind_speed_10m));
+    setText("hilo", `H ${toTemp(daily.temperature_2m_max[0])}°  ·  L ${toTemp(daily.temperature_2m_min[0])}°`);
+
+    setText("feelsLike", toTemp(cur.apparent_temperature));
+    setText("humidity", Math.round(cur.relative_humidity_2m));
+    $("humidityBar").style.width = `${cur.relative_humidity_2m}%`;
+
+    setText("windSpeed", toWind(cur.wind_speed_10m));
+    setText("windUnit", imperial ? "mph" : "km/h");
+    // Wind direction is where wind comes FROM, so flip 180° to point where it goes
+    $("windArrow").style.transform = `rotate(${(cur.wind_direction_10m + 180) % 360}deg)`;
+
+    setText("pressure", Math.round(cur.surface_pressure));
+
+    $("mainIconWrap").innerHTML = `<i data-feather="${info.icon}" class="weather-icon-large"></i>`;
+
+    renderForecast(daily, toTemp);
+    renderHourly(data, toTemp);
+    refreshIcons();
+  }
+
+  function renderForecast(daily, toTemp) {
+    const list = $("forecastList");
+    list.innerHTML = "";
+
+    // Range bars scale against the whole week's min and max
+    const weekMin = Math.min(...daily.temperature_2m_min);
+    const weekMax = Math.max(...daily.temperature_2m_max);
+    const span = Math.max(weekMax - weekMin, 1);
+
+    daily.time.forEach((dateStr, idx) => {
+      const label = idx === 0
+        ? "Today"
+        : new Date(`${dateStr}T00:00:00`).toLocaleDateString("en-US", { weekday: "short" });
+      const info = describe(daily.weather_code[idx], 1);
+      const minC = daily.temperature_2m_min[idx];
+      const maxC = daily.temperature_2m_max[idx];
+      const left = ((minC - weekMin) / span) * 100;
+      const width = Math.max(((maxC - minC) / span) * 100, 6);
+      const precip = daily.precipitation_probability_max[idx] ?? 0;
+
+      const row = document.createElement("div");
+      row.className = `forecast-item${idx === 0 ? " is-today" : ""}`;
+      row.style.setProperty("--i", idx);
+      row.innerHTML = `
+        <span class="f-day">${label}</span>
+        <span class="f-icon" title="${info.label}"><i data-feather="${info.icon}"></i></span>
+        <span class="f-precip"><i data-feather="droplet"></i>${precip}%</span>
+        <div class="f-range"><span style="left:${left}%;width:${width}%"></span></div>
+        <span class="f-temps">${toTemp(maxC)}° <small>${toTemp(minC)}°</small></span>
+      `;
+      list.appendChild(row);
+    });
+  }
+
+  function formatHour(iso) {
+    return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric" });
+  }
+
+  function renderHourly(data, toTemp) {
+    const list = $("hourlyList");
+    list.innerHTML = "";
+    const h = data.hourly;
+
+    // Start at the current hour
+    let start = h.time.findIndex((t) => t >= data.current.time);
+    if (start < 0) start = 0;
+
+    for (let i = start; i < start + 24 && i < h.time.length; i++) {
+      const info = describe(h.weather_code[i], h.is_day[i]);
+      const isNow = i === start;
+
+      const el = document.createElement("div");
+      el.className = `hour-item${isNow ? " is-now" : ""}`;
+      el.style.setProperty("--i", i - start);
+      el.innerHTML = `
+        <span class="h-time">${isNow ? "Now" : formatHour(h.time[i])}</span>
+        <i data-feather="${info.icon}" class="h-icon" title="${info.label}"></i>
+        <span class="h-temp">${toTemp(h.temperature_2m[i])}°</span>
+        <span class="h-precip"><i data-feather="droplet"></i>${h.precipitation_probability[i] ?? 0}%</span>
+      `;
+      list.appendChild(el);
+    }
+  }
+
+  // =========================================
+  // TOOLBAR CONTROLS
+  // =========================================
+  function setUnit(next) {
+    unit = next;
+    unitButtons.forEach((btn) => {
+      const on = btn.dataset.unit === next;
+      btn.classList.toggle("active", on);
+      btn.setAttribute("aria-pressed", String(on));
+    });
+    try {
+      localStorage.setItem("yw-unit", next);
+    } catch (_) {}
+    render();
+  }
+
+  unitButtons.forEach((btn) => {
+    btn.addEventListener("click", () => setUnit(btn.dataset.unit));
+  });
+
+  refreshBtn.addEventListener("click", () => {
+    if (current) loadWeather(current);
+  });
+
+  locateBtn.addEventListener("click", () => {
+    if (!navigator.geolocation) {
+      setStatus("Location isn't supported on this device.", true);
+      return;
+    }
+    setStatus("Finding you...");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => loadWeather({
+        lat: pos.coords.latitude,
+        lon: pos.coords.longitude,
+        name: "My Location"
+      }),
+      () => setStatus("Location access denied.", true),
+      { timeout: 8000 }
+    );
+  });
+
+  // =========================================
+  // INIT
+  // =========================================
+  refreshIcons();
+  setUnit(unit);
+
+  // Keep local time fresh
+  clockTimer = setInterval(() => {
+    if (current) setLocalTime(current.data);
+  }, 60000);
+
+  loadWeather({ lat: 31.5204, lon: 74.3587, name: "Lahore" });
+});
