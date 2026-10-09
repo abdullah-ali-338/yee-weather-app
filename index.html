@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <main class="container">
+
+    <!-- Search Bar -->
+    <div class="search-box">
+      <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"></circle>
+        <line x1="16.5" y1="16.5" x2="21" y2="21"></line>
+      </svg>
+      <input type="text" id="searchInput" placeholder="Search city..." autocomplete="off" aria-label="Search city">
+      <div id="searchResults" class="dropdown"></div>
+    </div>
+
+    <div id="loading" class="loading hidden">Fetching Weather Data...</div>
+
+    <div id="weatherContent" class="weather-content">
+
+      <!-- Top Hourly Forecast Bar -->
+      <div class="glass-card hourly-bar" id="hourlyBar"></div>
+
+      <!-- Middle Grid -->
+      <div class="middle-grid">
+
+        <!-- Temp Card -->
+        <div class="glass-card card">
+          <div class="card-top">
+            <h1 id="tempDisplay">+0°C</h1>
+            <span id="weatherIcon" class="main-icon">☀️</span>
+          </div>
+          <p id="conditionLabel" class="condition">Clear Sky</p>
+          <div class="card-bottom">
+            <span>💨 Wind: <strong id="windDisplay">0 km/h</strong></span>
+          </div>
+        </div>
+
+        <!-- Time & Location Card -->
+        <div class="glass-card card">
+          <div>
+            <h2 id="timeDisplay" class="time-text">--:--</h2>
+            <p id="dateDisplay" class="date-text">Loading date...</p>
+          </div>
+          <div class="location-badge">
+            📍 <span id="cityDisplay">Lahore</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom 7-Day Forecast -->
+      <div class="glass-card forecast-card">
+        <h3>7-Day Forecast</h3>
+        <div id="forecastList" class="forecast-list"></div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
