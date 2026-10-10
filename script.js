@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
   } catch (_) { /* storage blocked */ }
 
   let current = null;       // { name, lat, lon, data }
+  let selectedDay = 0;      // 0 = today (live), 1-6 = a forecast day
   let lastRequest = null;   // last { lat, lon, name } so Retry/Refresh work
   let weatherToken = 0;     // guards against out-of-order weather responses
   let searchToken = 0;      // guards against stale search results
@@ -374,7 +375,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const url =
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
       `&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,pressure_msl,wind_speed_10m,wind_direction_10m` +
-      `&hourly=temperature_2m,weather_code,precipitation_probability,is_day,uv_index,visibility` +
+      `&hourly=temperature_2m,weather_code,precipitation_probability,is_day,uv_index,visibility,relative_humidity_2m,apparent_temperature,pressure_msl,wind_speed_10m,wind_direction_10m` +
       `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max` +
       `&timezone=auto&forecast_days=7`;
 
@@ -386,6 +387,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (token !== weatherToken) return; // a newer request took over
 
+      selectedDay = 0;
       current = { name, lat, lon, data };
       render({ animate: true });
       setStatus(`Updated ${timeNow()}`);
@@ -418,7 +420,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // =========================================
   // RENDER
   // =========================================
-  function render({ animate = true } = {}) {
+  function render({ animate = true, swap = false } = {}) {
     if (!current) return;
 
     const { name, data } = current;
@@ -428,30 +430,64 @@ document.addEventListener("DOMContentLoaded", () => {
     const windUnit = imperial ? "mph" : "km/h";
     const animClass = animate ? " anim" : "";
 
-    const cur = data.current;
+    const live = data.current;
     const daily = data.daily;
     const hourly = data.hourly;
+    const sel = Math.min(selectedDay, daily.time.length - 1);
+    const isToday = sel === 0;
 
     // Index of the current hour in the hourly arrays
-    const hourPrefix = cur.time.slice(0, 13);
+    const hourPrefix = live.time.slice(0, 13);
     let idx = hourly.time.findIndex((t) => t.startsWith(hourPrefix));
     if (idx < 0) idx = 0;
+
+    // First hour of the selected day
+    const dayStart = Math.max(hourly.time.findIndex((t) => t.startsWith(daily.time[sel])), 0);
+
+    // Today shows live conditions. Another day shows its forecast at the warmest hour.
+    let cur = live;
+    if (!isToday) {
+      let rep = dayStart;
+      for (let k = dayStart; k < Math.min(dayStart + 24, hourly.time.length); k++) {
+        if (hourly.temperature_2m[k] > hourly.temperature_2m[rep]) rep = k;
+      }
+      cur = {
+        time: hourly.time[rep],
+        temperature_2m: daily.temperature_2m_max[sel],
+        apparent_temperature: hourly.apparent_temperature[rep],
+        relative_humidity_2m: hourly.relative_humidity_2m[rep],
+        weather_code: daily.weather_code[sel],
+        is_day: 1,
+        pressure_msl: hourly.pressure_msl[rep],
+        wind_speed_10m: hourly.wind_speed_10m[rep],
+        wind_direction_10m: hourly.wind_direction_10m[rep]
+      };
+      idx = rep;
+    }
 
     const info = getWeatherDetails(cur.weather_code, cur.is_day);
     const theme = themeFor(cur.weather_code, cur.is_day);
     document.body.dataset.theme = theme;
-    document.title = `${name} ${toTemp(cur.temperature_2m)}° · YeeWeather`;
+    document.title = `${name} ${toTemp(live.temperature_2m)}° · YeeWeather`;
 
     // ----- Hero card -----
     setText("headerCityName", name);
     animateNumber($("mainTemp"), toTemp(cur.temperature_2m), "°");
     setText("conditionDesc", info.label);
     setText("feelsChip", `${toTemp(cur.apparent_temperature)}°`);
-    setText("hiTemp", `${toTemp(daily.temperature_2m_max[0])}°`);
-    setText("loTemp", `${toTemp(daily.temperature_2m_min[0])}°`);
+    setText("hiTemp", `${toTemp(daily.temperature_2m_max[sel])}°`);
+    setText("loTemp", `${toTemp(daily.temperature_2m_min[sel])}°`);
     setText("summary", buildSummary(cur, theme));
     $("mainIconWrap").innerHTML = `<i data-feather="${info.icon}" class="weather-icon-large"></i>`;
-    updateLocalTime();
+
+    // Section titles and the time line follow the selected day
+    const selDate = new Date(`${daily.time[sel]}T00:00:00`);
+    setText("titleNow", isToday ? "Right now" : selDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }));
+    setText("titleConditions", isToday ? "Conditions" : `Conditions at ${fmtHour(hourly.time[idx])}`);
+    setText("titleHourly", isToday ? "Next 24 hours" : "Hourly");
+    $("backNowBtn").hidden = isToday;
+    if (isToday) updateLocalTime();
+    else setText("localTime", "Forecast");
 
     // ----- Metrics -----
     // Wind
@@ -510,10 +546,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const hourlyList = $("hourlyList");
     hourlyList.innerHTML = "";
     for (let i = 0; i < 24; i++) {
-      const k = idx + i;
+      const k = (isToday ? idx : dayStart) + i;
       if (k >= hourly.time.length) break;
 
-      const isNow = i === 0;
+      const isNow = isToday && i === 0;
       const code = isNow ? cur.weather_code : hourly.weather_code[k];
       const day = isNow ? cur.is_day : hourly.is_day[k];
       const temp = isNow ? cur.temperature_2m : hourly.temperature_2m[k];
@@ -546,27 +582,54 @@ document.addEventListener("DOMContentLoaded", () => {
       const hi = daily.temperature_2m_max[i];
       const pop = daily.precipitation_probability_max ? daily.precipitation_probability_max[i] : 0;
 
-      const row = document.createElement("div");
-      row.className = `forecast-item${i === 0 ? " is-today" : ""}${animClass}`;
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = `forecast-item${i === sel ? " is-selected" : ""}${animClass}`;
+      row.setAttribute("aria-pressed", String(i === sel));
       row.style.setProperty("--i", i);
       row.innerHTML = `
         <div class="f-day">
           <span class="f-name">${dayLabel}</span>
           <span class="f-label">${d.label}</span>
         </div>
-        <i data-feather="${d.icon}" class="f-icon"></i>
-        <span class="f-pop">${Math.round(pop || 0)}%</span>
+        <div class="f-mid">
+          <i data-feather="${d.icon}" class="f-icon"></i>
+          <span class="f-pop">${Math.round(pop || 0)}%</span>
+        </div>
         <span class="f-temps"><b>${toTemp(hi)}°</b> / ${toTemp(lo)}°</span>
       `;
+      row.addEventListener("click", () => selectDay(i));
       list.appendChild(row);
     });
+
+    if (swap) {
+      document.querySelectorAll(".current-card, .metrics-grid, .hourly-card").forEach((el) => {
+        el.classList.remove("swap");
+        void el.offsetWidth; // restart the animation
+        el.classList.add("swap");
+      });
+    }
 
     refreshIcons();
   }
 
+  // Pick a day from the 7-day list (0 = today / live)
+  function selectDay(i) {
+    if (!current) return;
+    if (i !== selectedDay) {
+      selectedDay = i;
+      render({ animate: false, swap: true });
+    }
+    // On single-column layouts the forecast sits below the hero, so bring the hero into view
+    if (window.matchMedia("(max-width: 1024px)").matches) {
+      document.querySelector(".block-now").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    }
+  }
+  $("backNowBtn").addEventListener("click", () => selectDay(0));
+
   // Live local time for the searched city
   function updateLocalTime() {
-    if (!current) return;
+    if (!current || selectedDay !== 0) return;
     const tz = current.data.timezone;
     const now = new Date();
     try {
