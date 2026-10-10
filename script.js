@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // =========================================
   // STATE
   // =========================================
-  const CLOSE_MS = 400;
+  const CLOSE_MS = 600; // matches the search bar shrink time
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -65,6 +65,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const isSearchOpen = () => searchWrapper.classList.contains("active");
 
+  // Let the refresh icon finish its turn instead of snapping back mid-spin
+  function stopSpinner(token) {
+    const done = () => { if (token === weatherToken) refreshBtn.classList.remove("spinning"); };
+    const svg = refreshBtn.querySelector("svg");
+    if (!svg || reduceMotion) { done(); return; }
+    svg.addEventListener("animationiteration", done, { once: true });
+    setTimeout(done, 1100); // safety net
+  }
+
   function setStatus(message, isError = false) {
     statusText.textContent = message;
     statusText.classList.toggle("is-error", isError);
@@ -76,12 +85,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Smooth number count-up/down
-  function animateNumber(el, to, suffix = "") {
+  function animateNumber(el, to, suffix = "", animate = true) {
     const from = typeof el._val === "number" ? el._val : 0;
     el._val = to;
     cancelAnimationFrame(el._raf);
 
-    if (reduceMotion || from === to) {
+    if (reduceMotion || !animate || from === to) {
       el.textContent = `${to}${suffix}`;
       return;
     }
@@ -102,9 +111,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // =========================================
   function getWeatherDetails(code, isDay = 1) {
     switch (code) {
-      case 0: return { label: "Clear Sky", icon: isDay ? "sun" : "moon" };
-      case 1: return { label: "Mainly Clear", icon: isDay ? "sun" : "moon" };
-      case 2: return { label: "Partly Cloudy", icon: "cloud" };
+      case 0: return { label: "Clear sky", icon: isDay ? "sun" : "moon" };
+      case 1: return { label: "Mainly clear", icon: isDay ? "sun" : "moon" };
+      case 2: return { label: "Partly cloudy", icon: "cloud" };
       case 3: return { label: "Overcast", icon: "cloud" };
       case 45:
       case 48: return { label: "Foggy", icon: "align-center" };
@@ -177,10 +186,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // =========================================
   function openSearch() {
     clearTimeout(closeTimer);
+    // The bar is positioned from the top of the page, so make sure it opens in view
+    if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
     searchWrapper.classList.add("active");
     focusOverlay.classList.add("active");
-    dashboard.classList.add("blur-bg");
-    searchWrapper.setAttribute("aria-expanded", "true");
+    searchInput.setAttribute("aria-expanded", "true");
   }
 
   function closeSearch() {
@@ -191,8 +201,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     searchWrapper.classList.remove("active");
     focusOverlay.classList.remove("active");
-    dashboard.classList.remove("blur-bg");
-    searchWrapper.setAttribute("aria-expanded", "false");
+    searchInput.setAttribute("aria-expanded", "false");
 
     searchResults.classList.remove("has-data");
     activeIndex = -1;
@@ -215,9 +224,14 @@ document.addEventListener("DOMContentLoaded", () => {
       closeSearch();
       return;
     }
-    if (e.key === "/" && document.activeElement !== searchInput && !e.target.matches("input, textarea")) {
+    if (
+      e.key === "/" &&
+      !e.metaKey && !e.ctrlKey && !e.altKey &&
+      document.activeElement !== searchInput &&
+      !e.target.matches("input, textarea")
+    ) {
       e.preventDefault();
-      searchInput.focus();
+      searchInput.focus({ preventScroll: true });
     }
   });
 
@@ -226,8 +240,12 @@ document.addEventListener("DOMContentLoaded", () => {
   // =========================================
   function setActiveItem(index) {
     const items = searchResults.querySelectorAll(".dropdown-item");
-    items.forEach((el, i) => el.classList.toggle("is-active", i === index));
+    items.forEach((el, i) => {
+      el.classList.toggle("is-active", i === index);
+      el.setAttribute("aria-selected", String(i === index));
+    });
     activeIndex = index;
+    if (index > -1) items[index].scrollIntoView({ block: "nearest" });
   }
 
   function renderSearchMessage(text, icon = "search") {
@@ -249,6 +267,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const item = document.createElement("div");
       item.className = "dropdown-item";
       item.setAttribute("role", "option");
+      item.setAttribute("aria-selected", "false");
 
       const name = document.createElement("span");
       name.className = "dropdown-city";
@@ -330,18 +349,17 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderSkeleton() {
     $("hourlyList").innerHTML = Array.from({ length: 10 }, () => `
       <div class="hour-item">
-        <span class="skel" style="width:36px;height:12px"></span>
+        <span class="skel" style="width:36px;height:12px;margin:2px 0"></span>
         <span class="skel" style="width:24px;height:24px;border-radius:50%"></span>
-        <span class="skel" style="width:32px;height:16px"></span>
-        <span class="skel" style="width:24px;height:10px"></span>
+        <span class="skel" style="width:32px;height:16px;margin:3px 0"></span>
+        <span class="skel" style="width:24px;height:10px;margin:2px 0"></span>
       </div>`).join("");
 
     $("forecastList").innerHTML = Array.from({ length: 7 }, () => `
       <div class="forecast-item">
-        <span class="skel" style="height:30px"></span>
-        <span class="skel" style="width:20px;height:20px;border-radius:50%"></span>
-        <span></span>
-        <span class="skel" style="height:12px;width:70px;justify-self:end"></span>
+        <span class="skel" style="height:30px;width:70%"></span>
+        <span class="skel" style="width:62px;height:20px"></span>
+        <span class="skel" style="height:14px;width:70px;justify-self:end"></span>
       </div>`).join("");
   }
 
@@ -370,7 +388,7 @@ document.addEventListener("DOMContentLoaded", () => {
     refreshBtn.classList.add("spinning");
     setText("headerCityName", name);
     renderSkeleton();
-    setStatus("Updating...");
+    setStatus("Updating…");
 
     const url =
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
@@ -412,7 +430,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } finally {
       if (token === weatherToken) {
         dashboard.classList.remove("is-loading");
-        refreshBtn.classList.remove("spinning");
+        stopSpinner(token);
       }
     }
   }
@@ -472,7 +490,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ----- Hero card -----
     setText("headerCityName", name);
-    animateNumber($("mainTemp"), toTemp(cur.temperature_2m), "°");
+    animateNumber($("mainTemp"), toTemp(cur.temperature_2m), "°", animate || swap);
     setText("conditionDesc", info.label);
     setText("feelsChip", `${toTemp(cur.apparent_temperature)}°`);
     setText("hiTemp", `${toTemp(daily.temperature_2m_max[sel])}°`);
@@ -603,7 +621,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     if (swap) {
-      document.querySelectorAll(".current-card, .metrics-grid, .hourly-card").forEach((el) => {
+      document.querySelectorAll(".current-card, .metric-card, .hourly-card").forEach((el) => {
         el.classList.remove("swap");
         void el.offsetWidth; // restart the animation
         el.classList.add("swap");
@@ -640,7 +658,10 @@ document.addEventListener("DOMContentLoaded", () => {
       setText("localTime", timeNow());
     }
   }
-  setInterval(updateLocalTime, 30000);
+  (function tickClock() {
+    updateLocalTime();
+    setTimeout(tickClock, 60000 - (Date.now() % 60000) + 50);
+  })();
 
   // =========================================
   // TOOLBAR CONTROLS
@@ -671,7 +692,7 @@ document.addEventListener("DOMContentLoaded", () => {
       setStatus("Location isn't supported on this device.", true);
       return;
     }
-    setStatus("Finding you...");
+    setStatus("Finding you…");
     navigator.geolocation.getCurrentPosition(
       (pos) => loadWeather({
         lat: pos.coords.latitude,
@@ -696,7 +717,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let dragStartLeft = 0;
 
   hourlyScroll.addEventListener("pointerdown", (e) => {
-    if (e.pointerType !== "mouse") return; // touch scrolls natively
+    if (e.pointerType !== "mouse" || e.button !== 0) return; // touch scrolls natively
     dragging = true;
     dragStartX = e.clientX;
     dragStartLeft = hourlyScroll.scrollLeft;
@@ -706,10 +727,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!dragging) return;
     hourlyScroll.scrollLeft = dragStartLeft - (e.clientX - dragStartX);
   });
-  window.addEventListener("pointerup", () => {
+  const endDrag = () => {
     dragging = false;
     hourlyScroll.classList.remove("dragging");
-  });
+  };
+  window.addEventListener("pointerup", endDrag);
+  window.addEventListener("pointercancel", endDrag);
 
   // =========================================
   // INIT
