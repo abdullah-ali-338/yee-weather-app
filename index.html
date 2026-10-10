@@ -88,7 +88,13 @@
 
     <!-- Right now -->
     <section class="block block-now">
-      <div class="section-head"><h2>Right now</h2><span class="line"></span></div>
+      <div class="section-head">
+        <h2 id="titleNow">Right now</h2>
+        <span class="line"></span>
+        <button class="mini-btn" id="backNowBtn" type="button" hidden>
+          <i data-feather="rotate-ccw"></i><span>Back to now</span>
+        </button>
+      </div>
 
       <div class="current-card glass">
         <div class="current-header">
@@ -124,7 +130,7 @@
 
     <!-- Conditions -->
     <section class="block block-conditions">
-      <div class="section-head"><h2>Conditions</h2><span class="line"></span></div>
+      <div class="section-head"><h2 id="titleConditions">Conditions</h2><span class="line"></span></div>
 
       <div class="metrics-grid">
         <div class="metric-card glass">
@@ -182,7 +188,7 @@
     <!-- Hourly -->
     <section class="block block-hourly">
       <div class="section-head">
-        <h2>Next 24 hours</h2>
+        <h2 id="titleHourly">Next 24 hours</h2>
         <span class="line"></span>
         <div class="scroll-btns">
           <button class="scroll-btn" id="hourPrev" type="button" aria-label="Scroll hours back"><i data-feather="chevron-left"></i></button>
