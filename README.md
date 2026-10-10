@@ -4,7 +4,6 @@
 ![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
 ![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)
 
 A modern, minimalist, real-time weather application engineered with **Vanilla Web Technologies** and powered by the **Open-Meteo API**. **YeeWeather** features an ultra-fluid **Liquid Glassmorphism** design aesthetic, ambient dark gradients, smooth state transitions, and responsive micro-interactions.
 
