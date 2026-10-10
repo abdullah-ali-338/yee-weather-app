@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="description" content="YeeWeather: live weather for any city in the world.">
+  <meta name="description" content="YeeWeather: live weather, hourly and 7-day forecasts for any city.">
   <meta name="theme-color" content="#020617">
   <title>YeeWeather | Liquid Glass</title>
 
@@ -21,24 +21,24 @@
   <!-- Styles -->
   <link rel="stylesheet" href="style.css">
 </head>
-<body data-mood="night">
+<body data-theme="clear-night">
 
-  <!-- Live Liquid Background (colors shift with the weather) -->
+  <!-- Weather-reactive liquid background -->
   <div class="bg-animation"></div>
   <div class="blob blob-1"></div>
   <div class="blob blob-2"></div>
   <div class="blob blob-3"></div>
 
-  <!-- Focus Overlay for Search -->
+  <!-- Focus overlay for search -->
   <div class="focus-overlay" id="focusOverlay"></div>
 
-  <!-- Top Navigation -->
+  <!-- Top navigation -->
   <nav class="navbar">
     <div class="brand">YeeWeather</div>
     <p class="tagline">Live weather, anywhere</p>
   </nav>
 
-  <!-- Liquid Animated Search Bar -->
+  <!-- Liquid animated search bar -->
   <div class="search-wrapper" id="searchWrapper" aria-expanded="false">
     <div class="search-box">
       <i data-feather="search"></i>
@@ -50,11 +50,12 @@
         aria-label="Search for a city"
         aria-controls="searchResults"
       >
+      <kbd class="kbd" aria-hidden="true">/</kbd>
     </div>
     <div class="dropdown glass" id="searchResults" role="listbox"></div>
   </div>
 
-  <!-- Main Weather Dashboard -->
+  <!-- Main dashboard -->
   <main class="dashboard is-loading" id="dashboard">
 
     <!-- Toolbar -->
@@ -75,99 +76,135 @@
       </div>
     </div>
 
-    <!-- Left Column: Current & Metrics -->
-    <div class="col-left">
+    <!-- Error / empty state -->
+    <section class="state-card glass" id="stateCard" role="alert" hidden>
+      <i data-feather="cloud-off" class="state-icon"></i>
+      <h3 id="stateTitle">Couldn't load the weather</h3>
+      <p id="stateMsg">Something went wrong. Try again in a moment.</p>
+      <button class="pill-btn primary" id="retryBtn" type="button">
+        <i data-feather="refresh-cw"></i>
+        <span>Try again</span>
+      </button>
+    </section>
 
-      <section class="current-card glass">
+    <!-- Right now -->
+    <section class="block block-now">
+      <div class="section-head"><h2>Right now</h2><span class="line"></span></div>
+
+      <div class="current-card glass">
         <div class="current-header">
           <div class="weather-icon-wrap" id="mainIconWrap">
             <i data-feather="sun" class="weather-icon-large"></i>
           </div>
-          <div class="card-city">
-            <i data-feather="map-pin"></i>
-            <div class="city-text">
+          <div class="city-block">
+            <div class="card-city">
+              <i data-feather="map-pin"></i>
               <span id="headerCityName">Lahore</span>
-              <small id="localTime"></small>
+            </div>
+            <div class="local-time">
+              <i data-feather="clock"></i>
+              <span id="localTime" data-skel>Sat, Oct 10 · 12:00 PM</span>
             </div>
           </div>
         </div>
 
         <div class="current-body">
-          <span class="eyebrow">Right now</span>
-          <div class="temp-main sk-target" id="mainTemp">--°</div>
-          <div class="condition-text sk-target" id="conditionDesc">Loading...</div>
-          <p class="summary" id="summary"></p>
-          <p class="hilo" id="hilo"></p>
+          <div class="temp-main" id="mainTemp" data-skel>--°</div>
+          <div class="condition-text" id="conditionDesc" data-skel>Loading</div>
+
+          <div class="chips">
+            <span class="chip">Feels like <b id="feelsChip" data-skel>--°</b></span>
+            <span class="chip">High <b id="hiTemp" data-skel>--°</b></span>
+            <span class="chip">Low <b id="loTemp" data-skel>--°</b></span>
+          </div>
+
+          <p class="summary" id="summary" data-skel>Fetching the latest conditions for your city.</p>
         </div>
-      </section>
+      </div>
+    </section>
+
+    <!-- Conditions -->
+    <section class="block block-conditions">
+      <div class="section-head"><h2>Conditions</h2><span class="line"></span></div>
 
       <div class="metrics-grid">
         <div class="metric-card glass">
-          <div class="metric-top">
-            <i data-feather="wind" class="metric-icon"></i>
-            <span class="wind-arrow" id="windArrow"><i data-feather="arrow-up"></i></span>
-          </div>
-          <span class="metric-label">Wind</span>
-          <span class="metric-value"><span id="windSpeed">--</span><small id="windUnit">km/h</small></span>
+          <div class="metric-top"><i data-feather="wind" class="metric-icon"></i><span class="metric-label">Wind</span></div>
+          <span class="metric-value" id="windSpeed" data-skel>--</span>
+          <div class="gauge"><span id="windBar"></span></div>
+          <span class="metric-sub" id="windSub" data-skel>--</span>
         </div>
 
         <div class="metric-card glass">
-          <div class="metric-top">
-            <i data-feather="droplet" class="metric-icon"></i>
-          </div>
-          <span class="metric-label">Humidity</span>
-          <span class="metric-value"><span id="humidity">--</span><small>%</small></span>
-          <div class="bar" aria-hidden="true"><span id="humidityBar"></span></div>
+          <div class="metric-top"><i data-feather="droplet" class="metric-icon"></i><span class="metric-label">Humidity</span></div>
+          <span class="metric-value" id="humidity" data-skel>--</span>
+          <div class="gauge"><span id="humidityBar"></span></div>
+          <span class="metric-sub" id="humiditySub" data-skel>--</span>
         </div>
 
         <div class="metric-card glass">
-          <div class="metric-top">
-            <i data-feather="thermometer" class="metric-icon"></i>
-          </div>
-          <span class="metric-label">Feels like</span>
-          <span class="metric-value"><span id="feelsLike">--</span><small>°</small></span>
+          <div class="metric-top"><i data-feather="thermometer" class="metric-icon"></i><span class="metric-label">Feels like</span></div>
+          <span class="metric-value" id="feelsLike" data-skel>--</span>
+          <div class="gauge"><span id="feelsBar"></span></div>
+          <span class="metric-sub" id="feelsSub" data-skel>--</span>
         </div>
 
         <div class="metric-card glass">
-          <div class="metric-top">
-            <i data-feather="activity" class="metric-icon"></i>
-          </div>
-          <span class="metric-label">Pressure</span>
-          <span class="metric-value"><span id="pressure">--</span><small>hPa</small></span>
+          <div class="metric-top"><i data-feather="activity" class="metric-icon"></i><span class="metric-label">Pressure</span></div>
+          <span class="metric-value" id="pressure" data-skel>--</span>
+          <div class="gauge"><span id="pressureBar"></span></div>
+          <span class="metric-sub" id="pressureSub" data-skel>--</span>
+        </div>
+
+        <div class="metric-card glass">
+          <div class="metric-top"><i data-feather="eye" class="metric-icon"></i><span class="metric-label">Visibility</span></div>
+          <span class="metric-value" id="visibility" data-skel>--</span>
+          <div class="gauge"><span id="visibilityBar"></span></div>
+          <span class="metric-sub" id="visibilitySub" data-skel>--</span>
+        </div>
+
+        <div class="metric-card glass">
+          <div class="metric-top"><i data-feather="sun" class="metric-icon"></i><span class="metric-label">UV index</span></div>
+          <span class="metric-value" id="uvIndex" data-skel>--</span>
+          <div class="gauge"><span id="uvBar"></span></div>
+          <span class="metric-sub" id="uvSub" data-skel>--</span>
         </div>
       </div>
+    </section>
 
-    </div>
-
-    <!-- Right Column: 7-Day Forecast -->
-    <div class="col-right">
-
-      <section class="forecast-card glass">
-        <h3 class="section-title">
-          <i data-feather="calendar"></i> Next 7 days
-        </h3>
+    <!-- 7-day forecast -->
+    <section class="block block-forecast">
+      <div class="section-head"><h2>Next 7 days</h2><span class="line"></span></div>
+      <div class="forecast-card glass">
         <div class="forecast-list" id="forecastList"></div>
-      </section>
+      </div>
+    </section>
 
-    </div>
-
-    <!-- Hourly Strip -->
-    <section class="hourly-card glass">
-      <h3 class="section-title">
-        <i data-feather="clock"></i> Next 24 hours
-      </h3>
-      <div class="hourly-scroll" id="hourlyList"></div>
+    <!-- Hourly -->
+    <section class="block block-hourly">
+      <div class="section-head">
+        <h2>Next 24 hours</h2>
+        <span class="line"></span>
+        <div class="scroll-btns">
+          <button class="scroll-btn" id="hourPrev" type="button" aria-label="Scroll hours back"><i data-feather="chevron-left"></i></button>
+          <button class="scroll-btn" id="hourNext" type="button" aria-label="Scroll hours forward"><i data-feather="chevron-right"></i></button>
+        </div>
+      </div>
+      <div class="hourly-card glass">
+        <div class="hourly-scroll" id="hourlyScroll">
+          <div class="hourly-list" id="hourlyList"></div>
+        </div>
+      </div>
     </section>
 
   </main>
 
   <!-- Footer -->
-  <footer class="site-footer">
-    <span>Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a></span>
-    <span id="footerUpdated">Loading...</span>
+  <footer class="footer">
+    <p>Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a></p>
+    <p id="footerUpdated">Not updated yet</p>
   </footer>
 
-  <!-- Logic & Interactions -->
   <script src="script.js"></script>
 </body>
 </html>
