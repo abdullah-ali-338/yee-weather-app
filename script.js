@@ -340,9 +340,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <span class="skel" style="height:30px"></span>
         <span class="skel" style="width:20px;height:20px;border-radius:50%"></span>
         <span></span>
-        <span class="skel" style="height:12px"></span>
-        <span class="skel" style="height:6px;border-radius:99px"></span>
-        <span class="skel" style="height:12px"></span>
+        <span class="skel" style="height:12px;width:70px;justify-self:end"></span>
       </div>`).join("");
   }
 
@@ -529,17 +527,13 @@ document.addEventListener("DOMContentLoaded", () => {
         <span class="h-time">${isNow ? "Now" : fmtHour(hourly.time[k])}</span>
         <i data-feather="${d.icon}" class="h-icon"></i>
         <span class="h-temp">${toTemp(temp)}°</span>
-        <span class="h-pop">${pop >= 10 ? `${pop}%` : ""}</span>
+        <span class="h-pop">${Math.round(pop || 0)}%</span>
       `;
       hourlyList.appendChild(item);
     }
     hourlyScroll.scrollLeft = 0;
 
-    // ----- 7-day forecast with range bars -----
-    const wMin = Math.min(...daily.temperature_2m_min);
-    const wMax = Math.max(...daily.temperature_2m_max);
-    const span = wMax - wMin || 1;
-
+    // ----- 7-day forecast -----
     const list = $("forecastList");
     list.innerHTML = "";
 
@@ -552,12 +546,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const hi = daily.temperature_2m_max[i];
       const pop = daily.precipitation_probability_max ? daily.precipitation_probability_max[i] : 0;
 
-      const left = ((lo - wMin) / span) * 100;
-      const width = Math.max(((hi - lo) / span) * 100, 8);
-      const dot = i === 0
-        ? `<span class="range-dot" style="left:${clamp01((cur.temperature_2m - lo) / ((hi - lo) || 1)) * 100}%"></span>`
-        : "";
-
       const row = document.createElement("div");
       row.className = `forecast-item${i === 0 ? " is-today" : ""}${animClass}`;
       row.style.setProperty("--i", i);
@@ -567,12 +555,8 @@ document.addEventListener("DOMContentLoaded", () => {
           <span class="f-label">${d.label}</span>
         </div>
         <i data-feather="${d.icon}" class="f-icon"></i>
-        <span class="f-pop">${pop >= 10 ? `${pop}%` : ""}</span>
-        <span class="f-lo">${toTemp(lo)}°</span>
-        <div class="range">
-          <span class="range-fill" style="left:${left}%;width:${width}%">${dot}</span>
-        </div>
-        <span class="f-hi">${toTemp(hi)}°</span>
+        <span class="f-pop">${Math.round(pop || 0)}%</span>
+        <span class="f-temps"><b>${toTemp(hi)}°</b> / ${toTemp(lo)}°</span>
       `;
       list.appendChild(row);
     });
