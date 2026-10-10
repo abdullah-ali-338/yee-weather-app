@@ -486,7 +486,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const info = getWeatherDetails(cur.weather_code, cur.is_day);
     const theme = themeFor(cur.weather_code, cur.is_day);
     document.body.dataset.theme = theme;
-    document.title = `${name} ${toTemp(live.temperature_2m)}° · YeeWeather`;
 
     // ----- Hero card -----
     setText("headerCityName", name);
