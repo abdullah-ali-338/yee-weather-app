@@ -42,8 +42,11 @@ body[data-theme="fog"]         { --bg1:#1e2430; --bg2:#2c3441; --bg3:#3c4656; --
   font-family: 'Inter', sans-serif;
 }
 
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
 body {
   min-height: 100vh;
+  min-height: 100dvh;
   color: var(--text-main);
   overflow-x: hidden;
   background-color: #020617;
@@ -56,6 +59,8 @@ button {
   background: none;
   border: none;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 button:focus-visible {
@@ -68,10 +73,7 @@ button:focus-visible {
    ========================================= */
 .bg-animation {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0;
   z-index: -2;
   background: linear-gradient(-45deg, var(--bg1), var(--bg2), var(--bg3), var(--bg4));
   background-size: 400% 400%;
@@ -275,10 +277,7 @@ button:focus-visible {
 /* Focus overlay */
 .focus-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0;
   background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -659,6 +658,8 @@ button:focus-visible {
   overflow-x: auto;
   scroll-snap-type: x proximity;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
   cursor: grab;
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
   mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
@@ -814,26 +815,36 @@ button:focus-visible {
 @media (max-width: 768px) {
   :root { --gutter: 16px; --gap: 20px; }
 
-  .navbar { top: 20px; left: var(--gutter); }
+  :root { --gutter: max(16px, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px)); }
+
+  .navbar { top: calc(20px + env(safe-area-inset-top, 0px)); left: var(--gutter); }
   .brand { font-size: 1.35rem; }
 
   .search-wrapper {
-    top: 80px;
+    top: calc(80px + env(safe-area-inset-top, 0px));
     left: 50%;
     transform: translateX(-50%);
     width: calc(100% - 2 * var(--gutter));
     height: 52px;
   }
   .search-wrapper.active {
-    top: 14vh;
+    top: calc(12vh + env(safe-area-inset-top, 0px));
     width: calc(100% - 24px);
     height: 60px;
   }
 
-  .dashboard { padding-top: 150px; }
+  .dropdown { max-height: min(360px, 50vh); }
+  .dropdown-item { padding: 14px 18px; }
 
-  .toolbar-actions { width: 100%; margin-left: 0; justify-content: space-between; }
-  .pill-btn { padding: 0 14px; }
+  .dashboard { padding-top: calc(150px + env(safe-area-inset-top, 0px)); }
+
+  .toolbar { gap: 12px; }
+  .toolbar-actions { width: 100%; margin-left: 0; gap: 8px; }
+  .pill-btn { height: 44px; padding: 0 14px; border-radius: 22px; }
+  .pill-btn.icon-only { width: 44px; padding: 0; }
+  #locateBtn { flex: 1; justify-content: center; min-width: 0; }
+  .unit-toggle { height: 44px; border-radius: 22px; }
+  .unit-btn { min-width: 44px; border-radius: 18px; }
 
   .current-card { padding: 26px 24px; min-height: 0; gap: 22px; }
   .weather-icon-large { width: 60px; height: 60px; }
@@ -853,10 +864,27 @@ button:focus-visible {
 
   .state-card { padding: 40px 20px; }
 
-  .footer { flex-direction: column; align-items: center; text-align: center; }
+  .footer { flex-direction: column; align-items: center; text-align: center; padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px)); }
 
+  .blob { filter: blur(60px); }
   .blob-2 { width: 300px; height: 300px; }
   .blob-3 { width: 220px; height: 220px; }
+}
+
+/* Larger phones / small tablets: 3 metric columns fit */
+@media (min-width: 560px) and (max-width: 768px) {
+  .metrics-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* Touch devices: no sticky hover states after a tap */
+@media (hover: none) {
+  .pill-btn:hover { background: rgba(255, 255, 255, 0.1); transform: none; }
+  .pill-btn.primary:hover { background: var(--accent); }
+  .pill-btn.icon-only:hover svg { transform: none; }
+  .scroll-btn:hover { background: rgba(255, 255, 255, 0.08); }
+  .metric-card:hover { transform: none; background: var(--glass-bg); }
+  .hour-item:not(.is-now):hover { background: rgba(255, 255, 255, 0.04); transform: none; }
+  .forecast-item:not(.is-today):hover { background: transparent; }
 }
 
 /* Very small phones */
@@ -867,6 +895,8 @@ button:focus-visible {
   .metric-card { padding: 14px; }
   .metric-value { font-size: 1.1rem; }
   .forecast-item { grid-template-columns: 58px 18px 28px 32px minmax(0, 1fr) 32px; gap: 5px; }
+  .pill-btn { padding: 0 12px; gap: 6px; }
+  .unit-btn { min-width: 40px; padding: 0 10px; }
   .f-name { font-size: 0.88rem; }
   .f-lo, .f-hi { font-size: 0.85rem; }
 }
