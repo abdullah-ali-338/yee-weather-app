@@ -8,41 +8,57 @@
   <meta name="color-scheme" content="dark">
   <title>YeeWeather</title>
 
-  <!-- Favicon (inline SVG, no extra file needed) -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id=%22bg%22%20x1=%220%22%20y1=%220%22%20x2=%221%22%20y2=%221%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%2338bdf8%22/%3E%3Cstop%20offset=%22.55%22%20stop-color=%22%234f46e5%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%237c3aed%22/%3E%3C/linearGradient%3E%3ClinearGradient%20id=%22sun%22%20x1=%220%22%20y1=%220%22%20x2=%221%22%20y2=%221%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%23fef08a%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%23f59e0b%22/%3E%3C/linearGradient%3E%3ClinearGradient%20id=%22cl%22%20x1=%220%22%20y1=%220%22%20x2=%220%22%20y2=%221%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%23fff%22%20stop-opacity=%22.98%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%23dbeafe%22%20stop-opacity=%22.82%22/%3E%3C/linearGradient%3E%3CradialGradient%20id=%22gl%22%20cx=%22.5%22%20cy=%22.5%22%20r=%22.5%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%23fde68a%22%20stop-opacity=%22.55%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%23fde68a%22%20stop-opacity=%220%22/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect%20width=%2264%22%20height=%2264%22%20rx=%2216%22%20fill=%22url(%23bg)%22/%3E%3Crect%20width=%2264%22%20height=%2232%22%20rx=%2216%22%20fill=%22%23fff%22%20opacity=%22.08%22/%3E%3Ccircle%20cx=%2243%22%20cy=%2221%22%20r=%2218%22%20fill=%22url(%23gl)%22/%3E%3Ccircle%20cx=%2243%22%20cy=%2221%22%20r=%2210%22%20fill=%22url(%23sun)%22/%3E%3Cpath%20d=%22M18%2049a8%208%200%200%201-1-15.9A11%2011%200%200%201%2039%2035a7%207%200%200%201%201%2014Z%22%20fill=%22url(%23cl)%22%20transform=%22translate(2%20-1)%22/%3E%3C/svg%3E">
 
-  <!-- Inter Font -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://api.open-meteo.com">
+  <link rel="dns-prefetch" href="https://geocoding-api.open-meteo.com">
 
-  <!-- Feather Icons -->
-  <script defer src="https://cdn.jsdelivr.net/npm/feather-icons@4.29.2/dist/feather.min.js"></script>
-
-  <!-- Styles -->
   <link rel="stylesheet" href="style.css">
+  <script defer src="script.js"></script>
 </head>
 <body data-theme="clear-night">
 
-  <!-- Weather-reactive liquid background -->
-  <div class="bg-animation"></div>
-  <div class="blob blob-1"></div>
-  <div class="blob blob-2"></div>
-  <div class="blob blob-3"></div>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+    <symbol id="i-navigation" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></symbol>
+    <symbol id="i-refresh-cw" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></symbol>
+    <symbol id="i-rotate-ccw" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></symbol>
+    <symbol id="i-map-pin" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+    <symbol id="i-wind" viewBox="0 0 24 24"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></symbol>
+    <symbol id="i-droplet" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></symbol>
+    <symbol id="i-thermometer" viewBox="0 0 24 24"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></symbol>
+    <symbol id="i-activity" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-chevron-left" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></symbol>
+    <symbol id="i-cloud-off" viewBox="0 0 24 24"><path d="M22.61 16.95A5 5 0 0 0 18 10h-1.26a8 8 0 0 0-7.05-6M5 5a8 8 0 0 0 4 15h9a5 5 0 0 0 1.7-.3"/><line x1="1" y1="1" x2="23" y2="23"/></symbol>
+    <symbol id="i-align-center" viewBox="0 0 24 24"><line x1="18" y1="10" x2="6" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="18" y1="18" x2="6" y2="18"/></symbol>
+    <symbol id="i-cloud-drizzle" viewBox="0 0 24 24"><line x1="8" y1="19" x2="8" y2="21"/><line x1="8" y1="13" x2="8" y2="15"/><line x1="16" y1="19" x2="16" y2="21"/><line x1="16" y1="13" x2="16" y2="15"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="12" y1="15" x2="12" y2="17"/><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/></symbol>
+    <symbol id="i-cloud-rain" viewBox="0 0 24 24"><line x1="16" y1="13" x2="16" y2="21"/><line x1="8" y1="13" x2="8" y2="21"/><line x1="12" y1="15" x2="12" y2="23"/><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/></symbol>
+    <symbol id="i-cloud-snow" viewBox="0 0 24 24"><path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25"/><line x1="8" y1="16" x2="8.01" y2="16"/><line x1="8" y1="20" x2="8.01" y2="20"/><line x1="12" y1="18" x2="12.01" y2="18"/><line x1="12" y1="22" x2="12.01" y2="22"/><line x1="16" y1="16" x2="16.01" y2="16"/><line x1="16" y1="20" x2="16.01" y2="20"/></symbol>
+    <symbol id="i-cloud-lightning" viewBox="0 0 24 24"><path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 9"/><polyline points="13 11 9 17 15 17 11 23"/></symbol>
+  </svg>
 
-  <!-- Focus overlay for search -->
+  <div class="bg" aria-hidden="true">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
   <div class="focus-overlay" id="focusOverlay"></div>
 
-  <!-- Top navigation -->
   <header class="navbar">
     <div class="brand">YeeWeather</div>
     <p class="tagline">Live weather, anywhere</p>
   </header>
 
-  <!-- Liquid animated search bar -->
   <div class="search-wrapper" id="searchWrapper">
     <div class="search-box">
-      <i data-feather="search"></i>
+      <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
       <input
         type="text"
         id="searchInput"
@@ -55,22 +71,20 @@
         aria-autocomplete="list"
       >
     </div>
-    <div class="dropdown glass" id="searchResults" role="listbox"></div>
+    <div class="dropdown" id="searchResults" role="listbox"></div>
   </div>
 
-  <!-- Main dashboard -->
   <main class="dashboard is-loading" id="dashboard">
 
-    <!-- Toolbar -->
     <div class="toolbar">
       <div class="status" id="statusText" aria-live="polite">Loading…</div>
       <div class="toolbar-actions">
         <button class="pill-btn" id="locateBtn" type="button" title="Use my location">
-          <i data-feather="navigation"></i>
+          <svg class="ic" aria-hidden="true"><use href="#i-navigation"/></svg>
           <span>My location</span>
         </button>
         <button class="pill-btn icon-only" id="refreshBtn" type="button" aria-label="Refresh weather">
-          <i data-feather="refresh-cw"></i>
+          <svg class="ic" aria-hidden="true"><use href="#i-refresh-cw"/></svg>
         </button>
         <div class="unit-toggle" role="group" aria-label="Units">
           <button class="unit-btn active" data-unit="metric" type="button" aria-pressed="true">°C</button>
@@ -79,39 +93,37 @@
       </div>
     </div>
 
-    <!-- Error / empty state -->
     <section class="state-card glass" id="stateCard" role="alert" hidden>
-      <i data-feather="cloud-off" class="state-icon"></i>
+      <svg class="ic state-icon" aria-hidden="true"><use href="#i-cloud-off"/></svg>
       <h3 id="stateTitle">Couldn't load the weather</h3>
       <p id="stateMsg">Something went wrong. Try again in a moment.</p>
       <button class="pill-btn primary" id="retryBtn" type="button">
-        <i data-feather="refresh-cw"></i>
+        <svg class="ic" aria-hidden="true"><use href="#i-refresh-cw"/></svg>
         <span>Try again</span>
       </button>
     </section>
 
-    <!-- Right now -->
     <section class="block block-now">
       <div class="section-head">
         <h2 id="titleNow">Right now</h2>
         <span class="line"></span>
         <button class="mini-btn" id="backNowBtn" type="button" hidden>
-          <i data-feather="rotate-ccw"></i><span>Back to now</span>
+          <svg class="ic" aria-hidden="true"><use href="#i-rotate-ccw"/></svg><span>Back to now</span>
         </button>
       </div>
 
       <div class="current-card glass">
         <div class="current-header">
           <div class="weather-icon-wrap" id="mainIconWrap">
-            <i data-feather="sun" class="weather-icon-large"></i>
+            <svg class="ic weather-icon-large" aria-hidden="true"><use href="#i-sun"/></svg>
           </div>
           <div class="city-block">
             <div class="card-city">
-              <i data-feather="map-pin"></i>
+              <svg class="ic" aria-hidden="true"><use href="#i-map-pin"/></svg>
               <span id="headerCityName">Lahore</span>
             </div>
             <div class="local-time">
-              <i data-feather="clock"></i>
+              <svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg>
               <span id="localTime" data-skel>Sat, Oct 10 · 12:00 PM</span>
             </div>
           </div>
@@ -132,48 +144,47 @@
       </div>
     </section>
 
-    <!-- Conditions -->
     <section class="block block-conditions">
       <div class="section-head"><h2 id="titleConditions">Conditions</h2><span class="line"></span></div>
 
       <div class="metrics-grid">
         <div class="metric-card glass">
-          <div class="metric-top"><i data-feather="wind" class="metric-icon"></i><span class="metric-label">Wind</span></div>
+          <div class="metric-top"><svg class="ic metric-icon" aria-hidden="true"><use href="#i-wind"/></svg><span class="metric-label">Wind</span></div>
           <span class="metric-value" id="windSpeed" data-skel>--</span>
           <div class="gauge"><span id="windBar"></span></div>
           <span class="metric-sub" id="windSub" data-skel>--</span>
         </div>
 
         <div class="metric-card glass">
-          <div class="metric-top"><i data-feather="droplet" class="metric-icon"></i><span class="metric-label">Humidity</span></div>
+          <div class="metric-top"><svg class="ic metric-icon" aria-hidden="true"><use href="#i-droplet"/></svg><span class="metric-label">Humidity</span></div>
           <span class="metric-value" id="humidity" data-skel>--</span>
           <div class="gauge"><span id="humidityBar"></span></div>
           <span class="metric-sub" id="humiditySub" data-skel>--</span>
         </div>
 
         <div class="metric-card glass">
-          <div class="metric-top"><i data-feather="thermometer" class="metric-icon"></i><span class="metric-label">Feels like</span></div>
+          <div class="metric-top"><svg class="ic metric-icon" aria-hidden="true"><use href="#i-thermometer"/></svg><span class="metric-label">Feels like</span></div>
           <span class="metric-value" id="feelsLike" data-skel>--</span>
           <div class="gauge"><span id="feelsBar"></span></div>
           <span class="metric-sub" id="feelsSub" data-skel>--</span>
         </div>
 
         <div class="metric-card glass">
-          <div class="metric-top"><i data-feather="activity" class="metric-icon"></i><span class="metric-label">Pressure</span></div>
+          <div class="metric-top"><svg class="ic metric-icon" aria-hidden="true"><use href="#i-activity"/></svg><span class="metric-label">Pressure</span></div>
           <span class="metric-value" id="pressure" data-skel>--</span>
           <div class="gauge"><span id="pressureBar"></span></div>
           <span class="metric-sub" id="pressureSub" data-skel>--</span>
         </div>
 
         <div class="metric-card glass">
-          <div class="metric-top"><i data-feather="eye" class="metric-icon"></i><span class="metric-label">Visibility</span></div>
+          <div class="metric-top"><svg class="ic metric-icon" aria-hidden="true"><use href="#i-eye"/></svg><span class="metric-label">Visibility</span></div>
           <span class="metric-value" id="visibility" data-skel>--</span>
           <div class="gauge"><span id="visibilityBar"></span></div>
           <span class="metric-sub" id="visibilitySub" data-skel>--</span>
         </div>
 
         <div class="metric-card glass">
-          <div class="metric-top"><i data-feather="sun" class="metric-icon"></i><span class="metric-label">UV index</span></div>
+          <div class="metric-top"><svg class="ic metric-icon" aria-hidden="true"><use href="#i-sun"/></svg><span class="metric-label">UV index</span></div>
           <span class="metric-value" id="uvIndex" data-skel>--</span>
           <div class="gauge"><span id="uvBar"></span></div>
           <span class="metric-sub" id="uvSub" data-skel>--</span>
@@ -181,7 +192,6 @@
       </div>
     </section>
 
-    <!-- 7-day forecast -->
     <section class="block block-forecast">
       <div class="section-head"><h2>Next 7 days</h2><span class="line"></span></div>
       <div class="forecast-card glass">
@@ -189,14 +199,13 @@
       </div>
     </section>
 
-    <!-- Hourly -->
     <section class="block block-hourly">
       <div class="section-head">
         <h2 id="titleHourly">Next 24 hours</h2>
         <span class="line"></span>
         <div class="scroll-btns">
-          <button class="scroll-btn" id="hourPrev" type="button" aria-label="Scroll hours back"><i data-feather="chevron-left"></i></button>
-          <button class="scroll-btn" id="hourNext" type="button" aria-label="Scroll hours forward"><i data-feather="chevron-right"></i></button>
+          <button class="scroll-btn" id="hourPrev" type="button" aria-label="Scroll hours back"><svg class="ic" aria-hidden="true"><use href="#i-chevron-left"/></svg></button>
+          <button class="scroll-btn" id="hourNext" type="button" aria-label="Scroll hours forward"><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg></button>
         </div>
       </div>
       <div class="hourly-card glass">
@@ -208,12 +217,10 @@
 
   </main>
 
-  <!-- Footer -->
   <footer class="footer">
     <p>Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a></p>
     <p id="footerUpdated">Not updated yet</p>
   </footer>
 
-  <script src="script.js"></script>
 </body>
 </html>
