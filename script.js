@@ -1,9 +1,8 @@
-document.addEventListener("DOMContentLoaded", () => {
+(() => {
+  "use strict";
+
   const $ = (id) => document.getElementById(id);
 
-  // =========================================
-  // DOM
-  // =========================================
   const searchInput = $("searchInput");
   const searchWrapper = $("searchWrapper");
   const searchResults = $("searchResults");
@@ -14,40 +13,73 @@ document.addEventListener("DOMContentLoaded", () => {
   const refreshBtn = $("refreshBtn");
   const retryBtn = $("retryBtn");
   const stateCard = $("stateCard");
+  const stateMsg = $("stateMsg");
   const hourlyScroll = $("hourlyScroll");
+  const hourlyList = $("hourlyList");
+  const forecastList = $("forecastList");
+  const backNowBtn = $("backNowBtn");
   const unitButtons = document.querySelectorAll(".unit-btn");
+  const swapEls = document.querySelectorAll(".current-card, .metric-card, .hourly-card");
 
-  // =========================================
-  // STATE
-  // =========================================
-  const CLOSE_MS = 600; // matches the search bar shrink time
+  const cityEl = $("headerCityName");
+  const localTimeEl = $("localTime");
+  const iconWrap = $("mainIconWrap");
+  const mainTemp = $("mainTemp");
+  const conditionDesc = $("conditionDesc");
+  const feelsChip = $("feelsChip");
+  const hiTemp = $("hiTemp");
+  const loTemp = $("loTemp");
+  const summaryEl = $("summary");
+  const titleNow = $("titleNow");
+  const titleConditions = $("titleConditions");
+  const titleHourly = $("titleHourly");
+  const footerUpdated = $("footerUpdated");
+
+  const windSpeed = $("windSpeed");
+  const windSub = $("windSub");
+  const windBar = $("windBar");
+  const humidityEl = $("humidity");
+  const humiditySub = $("humiditySub");
+  const humidityBar = $("humidityBar");
+  const feelsLike = $("feelsLike");
+  const feelsSub = $("feelsSub");
+  const feelsBar = $("feelsBar");
+  const pressureEl = $("pressure");
+  const pressureSub = $("pressureSub");
+  const pressureBar = $("pressureBar");
+  const visibilityEl = $("visibility");
+  const visibilitySub = $("visibilitySub");
+  const visibilityBar = $("visibilityBar");
+  const uvEl = $("uvIndex");
+  const uvSub = $("uvSub");
+  const uvBar = $("uvBar");
+
+  const CLOSE_MS = 600;
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   let unit = "metric";
   try {
     unit = localStorage.getItem("yw-unit") === "imperial" ? "imperial" : "metric";
-  } catch (_) { /* storage blocked */ }
+  } catch (_) {}
 
-  let current = null;       // { name, lat, lon, data }
-  let selectedDay = 0;      // 0 = today (live), 1-6 = a forecast day
-  let lastRequest = null;   // last { lat, lon, name } so Retry/Refresh work
-  let weatherToken = 0;     // guards against out-of-order weather responses
-  let searchToken = 0;      // guards against stale search results
+  let current = null;
+  let selectedDay = 0;
+  let lastRequest = null;
+  let weatherToken = 0;
+  let searchToken = 0;
+  let weatherCtl = null;
+  let searchCtl = null;
   let searchTimer = null;
   let closeTimer = null;
   let activeIndex = -1;
+  let cityResults = [];
 
-  // =========================================
-  // HELPERS
-  // =========================================
-  const refreshIcons = () => {
-    if (typeof feather !== "undefined") feather.replace();
-  };
+  const ic = (name, cls = "") =>
+    `<svg class="ic${cls ? " " + cls : ""}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
 
-  const setText = (id, value) => {
-    const el = $(id);
-    if (el) el.textContent = value;
+  const put = (el, value) => {
+    if (el.textContent !== value) el.textContent = value;
   };
 
   const clamp01 = (n) => Math.max(0, Math.min(1, n));
@@ -65,33 +97,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const isSearchOpen = () => searchWrapper.classList.contains("active");
 
-  // Let the refresh icon finish its turn instead of snapping back mid-spin
+  const markReady = () => {
+    if (document.body.classList.contains("ready")) return;
+    requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add("ready")));
+  };
+
   function stopSpinner(token) {
     const done = () => { if (token === weatherToken) refreshBtn.classList.remove("spinning"); };
     const svg = refreshBtn.querySelector("svg");
     if (!svg || reduceMotion) { done(); return; }
     svg.addEventListener("animationiteration", done, { once: true });
-    setTimeout(done, 1100); // safety net
+    setTimeout(done, 1100);
   }
 
   function setStatus(message, isError = false) {
-    statusText.textContent = message;
+    put(statusText, message);
     statusText.classList.toggle("is-error", isError);
   }
 
-  function setGauge(id, pct) {
-    const el = $(id);
-    if (el) el.style.width = `${Math.round(clamp01(pct) * 100)}%`;
+  function setGauge(el, pct) {
+    const v = Math.round(clamp01(pct) * 100) / 100;
+    if (el._p === v) return;
+    el._p = v;
+    el.style.transform = `scaleX(${v})`;
   }
 
-  // Smooth number count-up/down
   function animateNumber(el, to, suffix = "", animate = true) {
     const from = typeof el._val === "number" ? el._val : 0;
     el._val = to;
     cancelAnimationFrame(el._raf);
 
     if (reduceMotion || !animate || from === to) {
-      el.textContent = `${to}${suffix}`;
+      put(el, `${to}${suffix}`);
       return;
     }
 
@@ -100,55 +137,42 @@ document.addEventListener("DOMContentLoaded", () => {
     const step = (now) => {
       const t = Math.min((now - start) / dur, 1);
       const eased = 1 - Math.pow(1 - t, 3);
-      el.textContent = `${Math.round(from + (to - from) * eased)}${suffix}`;
+      put(el, `${Math.round(from + (to - from) * eased)}${suffix}`);
       if (t < 1) el._raf = requestAnimationFrame(step);
     };
     el._raf = requestAnimationFrame(step);
   }
 
-  // =========================================
-  // WEATHER MAPPING
-  // =========================================
+  const WX = new Map();
+  const reg = (codes, label, icon) => codes.forEach((c) => WX.set(c, { label, icon }));
+  reg([2], "Partly cloudy", "cloud");
+  reg([3], "Overcast", "cloud");
+  reg([45, 48], "Foggy", "align-center");
+  reg([51, 53, 55, 56, 57], "Drizzle", "cloud-drizzle");
+  reg([61, 63, 65, 66, 67, 80, 81, 82], "Rain", "cloud-rain");
+  reg([71, 73, 75, 77, 85, 86], "Snow", "cloud-snow");
+  reg([95, 96, 99], "Thunderstorm", "cloud-lightning");
+
+  const CLOUDY = { label: "Cloudy", icon: "cloud" };
+
   function getWeatherDetails(code, isDay = 1) {
-    switch (code) {
-      case 0: return { label: "Clear sky", icon: isDay ? "sun" : "moon" };
-      case 1: return { label: "Mainly clear", icon: isDay ? "sun" : "moon" };
-      case 2: return { label: "Partly cloudy", icon: "cloud" };
-      case 3: return { label: "Overcast", icon: "cloud" };
-      case 45:
-      case 48: return { label: "Foggy", icon: "align-center" };
-      case 51:
-      case 53:
-      case 55:
-      case 56:
-      case 57: return { label: "Drizzle", icon: "cloud-drizzle" };
-      case 61:
-      case 63:
-      case 65:
-      case 66:
-      case 67:
-      case 80:
-      case 81:
-      case 82: return { label: "Rain", icon: "cloud-rain" };
-      case 71:
-      case 73:
-      case 75:
-      case 77:
-      case 85:
-      case 86: return { label: "Snow", icon: "cloud-snow" };
-      case 95:
-      case 96:
-      case 99: return { label: "Thunderstorm", icon: "cloud-lightning" };
-      default: return { label: "Cloudy", icon: "cloud" };
-    }
+    if (code === 0) return { label: "Clear sky", icon: isDay ? "sun" : "moon" };
+    if (code === 1) return { label: "Mainly clear", icon: isDay ? "sun" : "moon" };
+    return WX.get(code) || CLOUDY;
   }
 
+  const THEME_BY_CODE = new Map();
+  [
+    ["storm", [95, 96, 99]],
+    ["snow", [71, 73, 75, 77, 85, 86]],
+    ["rain", [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82]],
+    ["fog", [45, 48]]
+  ].forEach(([theme, codes]) => codes.forEach((c) => THEME_BY_CODE.set(c, theme)));
+
   function themeFor(code, isDay) {
-    if ([95, 96, 99].includes(code)) return "storm";
-    if ([71, 73, 75, 77, 85, 86].includes(code)) return "snow";
-    if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return "rain";
-    if ([45, 48].includes(code)) return "fog";
-    if (code === 0 || code === 1) return isDay ? "clear-day" : "clear-night";
+    const t = THEME_BY_CODE.get(code);
+    if (t) return t;
+    if (code <= 1) return isDay ? "clear-day" : "clear-night";
     return isDay ? "cloudy-day" : "cloudy-night";
   }
 
@@ -181,12 +205,8 @@ document.addEventListener("DOMContentLoaded", () => {
     return `${tempWord}${humid}, with ${wind}.${extra}`;
   }
 
-  // =========================================
-  // SEARCH OPEN / CLOSE
-  // =========================================
   function openSearch() {
     clearTimeout(closeTimer);
-    // The bar is positioned from the top of the page, so make sure it opens in view
     if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
     searchWrapper.classList.add("active");
     focusOverlay.classList.add("active");
@@ -197,7 +217,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!isSearchOpen()) return;
 
     clearTimeout(searchTimer);
-    searchToken++; // discard in-flight search results
+    searchToken++;
+    if (searchCtl) searchCtl.abort();
 
     searchWrapper.classList.remove("active");
     focusOverlay.classList.remove("active");
@@ -205,13 +226,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     searchResults.classList.remove("has-data");
     activeIndex = -1;
-
-    // Blur so clicking the input again re-fires focus and reopens search
     searchInput.blur();
 
     closeTimer = setTimeout(() => {
       if (isSearchOpen()) return;
-      searchResults.innerHTML = "";
+      searchResults.replaceChildren();
       searchInput.value = "";
     }, CLOSE_MS);
   }
@@ -235,9 +254,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // =========================================
-  // SEARCH RESULTS
-  // =========================================
   function setActiveItem(index) {
     const items = searchResults.querySelectorAll(".dropdown-item");
     items.forEach((el, i) => {
@@ -249,25 +265,22 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderSearchMessage(text, icon = "search") {
-    searchResults.innerHTML = "";
-    const msg = document.createElement("div");
-    msg.className = "dropdown-empty";
-    msg.innerHTML = `<i data-feather="${icon}"></i><span></span>`;
-    msg.querySelector("span").textContent = text;
-    searchResults.appendChild(msg);
+    searchResults.innerHTML = `<div class="dropdown-empty">${ic(icon)}<span></span></div>`;
+    searchResults.querySelector("span").textContent = text;
     searchResults.classList.add("has-data");
-    refreshIcons();
   }
 
   function renderSearchResults(cities) {
-    searchResults.innerHTML = "";
+    cityResults = cities;
     activeIndex = -1;
 
-    cities.forEach((city) => {
+    const frag = document.createDocumentFragment();
+    cities.forEach((city, i) => {
       const item = document.createElement("div");
       item.className = "dropdown-item";
       item.setAttribute("role", "option");
       item.setAttribute("aria-selected", "false");
+      item.dataset.i = i;
 
       const name = document.createElement("span");
       name.className = "dropdown-city";
@@ -278,19 +291,26 @@ document.addEventListener("DOMContentLoaded", () => {
       region.textContent = [city.admin1, city.country].filter(Boolean).join(", ");
 
       item.append(name, region);
-      item.addEventListener("click", () => selectCity(city));
-      searchResults.appendChild(item);
+      frag.appendChild(item);
     });
 
+    searchResults.replaceChildren(frag);
     searchResults.classList.add("has-data");
   }
 
+  searchResults.addEventListener("click", (e) => {
+    const item = e.target.closest(".dropdown-item");
+    if (item) selectCity(cityResults[+item.dataset.i]);
+  });
+
   async function searchCities(query) {
     const token = ++searchToken;
+    if (searchCtl) searchCtl.abort();
+    searchCtl = new AbortController();
 
     try {
       const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=6&language=en&format=json`;
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: searchCtl.signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
@@ -302,6 +322,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       renderSearchResults(data.results);
     } catch (err) {
+      if (err.name === "AbortError") return;
       console.error("City search failed.", err);
       if (token === searchToken) renderSearchMessage("Search failed. Check your connection.", "cloud-off");
     }
@@ -314,8 +335,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (query.length < 3) {
       searchToken++;
+      if (searchCtl) searchCtl.abort();
       searchResults.classList.remove("has-data");
-      searchResults.innerHTML = "";
+      searchResults.replaceChildren();
       return;
     }
 
@@ -334,7 +356,7 @@ document.addEventListener("DOMContentLoaded", () => {
       setActiveItem(activeIndex > 0 ? activeIndex - 1 : items.length - 1);
     } else if (e.key === "Enter") {
       e.preventDefault();
-      (items[activeIndex > -1 ? activeIndex : 0]).click();
+      items[activeIndex > -1 ? activeIndex : 0].click();
     }
   });
 
@@ -343,11 +365,8 @@ document.addEventListener("DOMContentLoaded", () => {
     loadWeather({ lat: city.latitude, lon: city.longitude, name: city.name });
   }
 
-  // =========================================
-  // SKELETONS & ERROR STATE
-  // =========================================
   function renderSkeleton() {
-    $("hourlyList").innerHTML = Array.from({ length: 10 }, () => `
+    hourlyList.innerHTML = Array.from({ length: 10 }, () => `
       <div class="hour-item">
         <span class="skel" style="width:36px;height:12px;margin:2px 0"></span>
         <span class="skel" style="width:24px;height:24px;border-radius:50%"></span>
@@ -355,7 +374,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <span class="skel" style="width:24px;height:10px;margin:2px 0"></span>
       </div>`).join("");
 
-    $("forecastList").innerHTML = Array.from({ length: 7 }, () => `
+    forecastList.innerHTML = Array.from({ length: 7 }, () => `
       <div class="forecast-item">
         <span class="skel" style="height:30px;width:70%"></span>
         <span class="skel" style="width:62px;height:20px"></span>
@@ -366,8 +385,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function showError(message) {
     dashboard.classList.add("has-error");
     stateCard.hidden = false;
-    setText("stateMsg", message);
-    refreshIcons();
+    put(stateMsg, message);
   }
 
   function hideError() {
@@ -375,19 +393,22 @@ document.addEventListener("DOMContentLoaded", () => {
     stateCard.hidden = true;
   }
 
-  // =========================================
-  // WEATHER DATA
-  // =========================================
   async function loadWeather(req) {
     const { lat, lon, name } = req;
     lastRequest = req;
     const token = ++weatherToken;
+    if (weatherCtl) weatherCtl.abort();
+    weatherCtl = new AbortController();
+
+    const sameCity = !!current && current.lat === lat && current.lon === lon;
 
     hideError();
-    dashboard.classList.add("is-loading");
     refreshBtn.classList.add("spinning");
-    setText("headerCityName", name);
-    renderSkeleton();
+    put(cityEl, name);
+    if (!sameCity) {
+      dashboard.classList.add("is-loading");
+      renderSkeleton();
+    }
     setStatus("Updating…");
 
     const url =
@@ -398,21 +419,23 @@ document.addEventListener("DOMContentLoaded", () => {
       `&timezone=auto&forecast_days=7`;
 
     try {
-      // Keep the skeleton up for a minimum beat so it never flickers
-      const [res] = await Promise.all([fetch(url), delay(450)]);
+      const [res] = await Promise.all([
+        fetch(url, { signal: weatherCtl.signal }),
+        sameCity ? null : delay(300)
+      ]);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
-      if (token !== weatherToken) return; // a newer request took over
+      if (token !== weatherToken) return;
 
       selectedDay = 0;
       current = { name, lat, lon, data };
-      render({ animate: true });
+      render({ animate: !sameCity });
       setStatus(`Updated ${timeNow()}`);
-      setText("footerUpdated", `Last updated ${timeNow()}`);
+      put(footerUpdated, `Last updated ${timeNow()}`);
     } catch (err) {
-      console.error("Atmosphere fetch failed.", err);
       if (token !== weatherToken) return;
+      console.error("Atmosphere fetch failed.", err);
 
       const offline = !navigator.onLine;
       const message = offline
@@ -420,7 +443,6 @@ document.addEventListener("DOMContentLoaded", () => {
         : "The weather service didn't respond. Give it a moment and try again.";
 
       if (current) {
-        // Keep showing the last good data
         render({ animate: false });
         setStatus(offline ? "You're offline." : "Couldn't refresh. Showing last data.", true);
       } else {
@@ -431,13 +453,11 @@ document.addEventListener("DOMContentLoaded", () => {
       if (token === weatherToken) {
         dashboard.classList.remove("is-loading");
         stopSpinner(token);
+        markReady();
       }
     }
   }
 
-  // =========================================
-  // RENDER
-  // =========================================
   function render({ animate = true, swap = false } = {}) {
     if (!current) return;
 
@@ -446,7 +466,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const toTemp = (c) => Math.round(imperial ? (c * 9) / 5 + 32 : c);
     const toWind = (kmh) => Math.round(imperial ? kmh / 1.609 : kmh);
     const windUnit = imperial ? "mph" : "km/h";
-    const animClass = animate ? " anim" : "";
 
     const live = data.current;
     const daily = data.daily;
@@ -454,15 +473,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const sel = Math.min(selectedDay, daily.time.length - 1);
     const isToday = sel === 0;
 
-    // Index of the current hour in the hourly arrays
     const hourPrefix = live.time.slice(0, 13);
     let idx = hourly.time.findIndex((t) => t.startsWith(hourPrefix));
     if (idx < 0) idx = 0;
 
-    // First hour of the selected day
     const dayStart = Math.max(hourly.time.findIndex((t) => t.startsWith(daily.time[sel])), 0);
 
-    // Today shows live conditions. Another day shows its forecast at the warmest hour.
     let cur = live;
     if (!isToday) {
       let rep = dayStart;
@@ -485,85 +501,78 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const info = getWeatherDetails(cur.weather_code, cur.is_day);
     const theme = themeFor(cur.weather_code, cur.is_day);
-    document.body.dataset.theme = theme;
+    if (document.body.dataset.theme !== theme) document.body.dataset.theme = theme;
 
-    // ----- Hero card -----
-    setText("headerCityName", name);
-    animateNumber($("mainTemp"), toTemp(cur.temperature_2m), "°", animate || swap);
-    setText("conditionDesc", info.label);
-    setText("feelsChip", `${toTemp(cur.apparent_temperature)}°`);
-    setText("hiTemp", `${toTemp(daily.temperature_2m_max[sel])}°`);
-    setText("loTemp", `${toTemp(daily.temperature_2m_min[sel])}°`);
-    setText("summary", buildSummary(cur, theme));
-    $("mainIconWrap").innerHTML = `<i data-feather="${info.icon}" class="weather-icon-large"></i>`;
+    put(cityEl, name);
+    animateNumber(mainTemp, toTemp(cur.temperature_2m), "°", animate || swap);
+    put(conditionDesc, info.label);
+    put(feelsChip, `${toTemp(cur.apparent_temperature)}°`);
+    put(hiTemp, `${toTemp(daily.temperature_2m_max[sel])}°`);
+    put(loTemp, `${toTemp(daily.temperature_2m_min[sel])}°`);
+    put(summaryEl, buildSummary(cur, theme));
+    if (iconWrap._icon !== info.icon) {
+      iconWrap._icon = info.icon;
+      iconWrap.innerHTML = ic(info.icon, "weather-icon-large");
+    }
 
-    // Section titles and the time line follow the selected day
     const selDate = new Date(`${daily.time[sel]}T00:00:00`);
-    setText("titleNow", isToday ? "Right now" : selDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }));
-    setText("titleConditions", isToday ? "Conditions" : `Conditions at ${fmtHour(hourly.time[idx])}`);
-    setText("titleHourly", isToday ? "Next 24 hours" : "Hourly");
-    $("backNowBtn").hidden = isToday;
+    put(titleNow, isToday ? "Right now" : selDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }));
+    put(titleConditions, isToday ? "Conditions" : `Conditions at ${fmtHour(hourly.time[idx])}`);
+    put(titleHourly, isToday ? "Next 24 hours" : "Hourly");
+    backNowBtn.hidden = isToday;
     if (isToday) updateLocalTime();
-    else setText("localTime", "Forecast");
+    else put(localTimeEl, "Forecast");
 
-    // ----- Metrics -----
-    // Wind
-    setText("windSpeed", `${toWind(cur.wind_speed_10m)} ${windUnit}`);
-    setGauge("windBar", cur.wind_speed_10m / 50);
-    $("windSub").innerHTML =
+    put(windSpeed, `${toWind(cur.wind_speed_10m)} ${windUnit}`);
+    setGauge(windBar, cur.wind_speed_10m / 50);
+    windSub.innerHTML =
       `<span class="wind-arrow" style="transform: rotate(${cur.wind_direction_10m + 180}deg)">` +
       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>` +
       `<span>From ${compass(cur.wind_direction_10m)}</span>`;
 
-    // Humidity
     const hum = Math.round(cur.relative_humidity_2m);
-    setText("humidity", `${hum}%`);
-    setGauge("humidityBar", hum / 100);
-    setText("humiditySub", hum < 30 ? "Dry" : hum < 60 ? "Comfortable" : hum < 80 ? "Humid" : "Very humid");
+    put(humidityEl, `${hum}%`);
+    setGauge(humidityBar, hum / 100);
+    put(humiditySub, hum < 30 ? "Dry" : hum < 60 ? "Comfortable" : hum < 80 ? "Humid" : "Very humid");
 
-    // Feels like
     const diff = cur.apparent_temperature - cur.temperature_2m;
-    setText("feelsLike", `${toTemp(cur.apparent_temperature)}°`);
-    setGauge("feelsBar", (cur.apparent_temperature + 10) / 55);
-    setText("feelsSub", diff >= 2 ? "Warmer than actual" : diff <= -2 ? "Cooler than actual" : "Same as actual");
+    put(feelsLike, `${toTemp(cur.apparent_temperature)}°`);
+    setGauge(feelsBar, (cur.apparent_temperature + 10) / 55);
+    put(feelsSub, diff >= 2 ? "Warmer than actual" : diff <= -2 ? "Cooler than actual" : "Same as actual");
 
-    // Pressure
     const p = cur.pressure_msl;
-    setText("pressure", imperial ? `${(p * 0.02953).toFixed(2)} inHg` : `${Math.round(p)} hPa`);
-    setGauge("pressureBar", (p - 980) / 60);
-    setText("pressureSub", p < 1009 ? "Low" : p <= 1022 ? "Normal" : "High");
+    put(pressureEl, imperial ? `${(p * 0.02953).toFixed(2)} inHg` : `${Math.round(p)} hPa`);
+    setGauge(pressureBar, (p - 980) / 60);
+    put(pressureSub, p < 1009 ? "Low" : p <= 1022 ? "Normal" : "High");
 
-    // Visibility
     const visM = hourly.visibility ? hourly.visibility[idx] : null;
     if (visM == null) {
-      setText("visibility", "--");
-      setText("visibilitySub", "No data");
-      setGauge("visibilityBar", 0);
+      put(visibilityEl, "--");
+      put(visibilitySub, "No data");
+      setGauge(visibilityBar, 0);
     } else {
       const km = visM / 1000;
       const shown = imperial ? km / 1.609 : km;
-      setText("visibility", `${shown >= 10 ? Math.round(shown) : shown.toFixed(1)} ${imperial ? "mi" : "km"}`);
-      setGauge("visibilityBar", km / 10);
-      setText("visibilitySub", km >= 10 ? "Excellent" : km >= 5 ? "Good" : km >= 2 ? "Moderate" : "Poor");
+      put(visibilityEl, `${shown >= 10 ? Math.round(shown) : shown.toFixed(1)} ${imperial ? "mi" : "km"}`);
+      setGauge(visibilityBar, km / 10);
+      put(visibilitySub, km >= 10 ? "Excellent" : km >= 5 ? "Good" : km >= 2 ? "Moderate" : "Poor");
     }
 
-    // UV
     const uv = hourly.uv_index ? hourly.uv_index[idx] : null;
     if (uv == null) {
-      setText("uvIndex", "--");
-      setText("uvSub", "No data");
-      setGauge("uvBar", 0);
+      put(uvEl, "--");
+      put(uvSub, "No data");
+      setGauge(uvBar, 0);
     } else {
-      setText("uvIndex", uv.toFixed(1));
-      setGauge("uvBar", uv / 11);
-      setText("uvSub", uv < 3 ? "Low" : uv < 6 ? "Moderate" : uv < 8 ? "High" : uv < 11 ? "Very high" : "Extreme");
+      put(uvEl, uv.toFixed(1));
+      setGauge(uvBar, uv / 11);
+      put(uvSub, uv < 3 ? "Low" : uv < 6 ? "Moderate" : uv < 8 ? "High" : uv < 11 ? "Very high" : "Extreme");
     }
 
-    // ----- Hourly strip (next 24 hours) -----
-    const hourlyList = $("hourlyList");
-    hourlyList.innerHTML = "";
+    const base = isToday ? idx : dayStart;
+    let hoursHtml = "";
     for (let i = 0; i < 24; i++) {
-      const k = (isToday ? idx : dayStart) + i;
+      const k = base + i;
       if (k >= hourly.time.length) break;
 
       const isNow = isToday && i === 0;
@@ -573,23 +582,18 @@ document.addEventListener("DOMContentLoaded", () => {
       const pop = hourly.precipitation_probability ? hourly.precipitation_probability[k] : 0;
       const d = getWeatherDetails(code, day);
 
-      const item = document.createElement("div");
-      item.className = `hour-item${isNow ? " is-now" : ""}${animClass}`;
-      item.style.setProperty("--i", Math.min(i, 12));
-      item.innerHTML = `
-        <span class="h-time">${isNow ? "Now" : fmtHour(hourly.time[k])}</span>
-        <i data-feather="${d.icon}" class="h-icon"></i>
-        <span class="h-temp">${toTemp(temp)}°</span>
-        <span class="h-pop">${Math.round(pop || 0)}%</span>
-      `;
-      hourlyList.appendChild(item);
+      hoursHtml +=
+        `<div class="hour-item${isNow ? " is-now" : ""}${animate && i < 9 ? " anim" : ""}" style="--i:${i}">` +
+        `<span class="h-time">${isNow ? "Now" : fmtHour(hourly.time[k])}</span>` +
+        ic(d.icon, "h-icon") +
+        `<span class="h-temp">${toTemp(temp)}°</span>` +
+        `<span class="h-pop">${Math.round(pop || 0)}%</span>` +
+        `</div>`;
     }
+    hourlyList.innerHTML = hoursHtml;
     hourlyScroll.scrollLeft = 0;
 
-    // ----- 7-day forecast -----
-    const list = $("forecastList");
-    list.innerHTML = "";
-
+    let daysHtml = "";
     daily.time.forEach((dateStr, i) => {
       const dayLabel = i === 0
         ? "Today"
@@ -599,83 +603,74 @@ document.addEventListener("DOMContentLoaded", () => {
       const hi = daily.temperature_2m_max[i];
       const pop = daily.precipitation_probability_max ? daily.precipitation_probability_max[i] : 0;
 
-      const row = document.createElement("button");
-      row.type = "button";
-      row.className = `forecast-item${i === sel ? " is-selected" : ""}${animClass}`;
-      row.setAttribute("aria-pressed", String(i === sel));
-      row.style.setProperty("--i", i);
-      row.innerHTML = `
-        <div class="f-day">
-          <span class="f-name">${dayLabel}</span>
-          <span class="f-label">${d.label}</span>
-        </div>
-        <div class="f-mid">
-          <i data-feather="${d.icon}" class="f-icon"></i>
-          <span class="f-pop">${Math.round(pop || 0)}%</span>
-        </div>
-        <span class="f-temps"><b>${toTemp(hi)}°</b> / ${toTemp(lo)}°</span>
-      `;
-      row.addEventListener("click", () => selectDay(i));
-      list.appendChild(row);
+      daysHtml +=
+        `<button type="button" class="forecast-item${i === sel ? " is-selected" : ""}${animate ? " anim" : ""}" data-i="${i}" aria-pressed="${i === sel}" style="--i:${i}">` +
+        `<div class="f-day"><span class="f-name">${dayLabel}</span><span class="f-label">${d.label}</span></div>` +
+        `<div class="f-mid">${ic(d.icon, "f-icon")}<span class="f-pop">${Math.round(pop || 0)}%</span></div>` +
+        `<span class="f-temps"><b>${toTemp(hi)}°</b> / ${toTemp(lo)}°</span>` +
+        `</button>`;
     });
+    forecastList.innerHTML = daysHtml;
 
     if (swap) {
-      document.querySelectorAll(".current-card, .metric-card, .hourly-card").forEach((el) => {
-        el.classList.remove("swap");
-        void el.offsetWidth; // restart the animation
-        el.classList.add("swap");
-      });
+      swapEls.forEach((el) => el.classList.remove("swap"));
+      void dashboard.offsetWidth;
+      swapEls.forEach((el) => el.classList.add("swap"));
     }
-
-    refreshIcons();
   }
 
-  // Pick a day from the 7-day list (0 = today / live)
   function selectDay(i) {
     if (!current) return;
     if (i !== selectedDay) {
       selectedDay = i;
       render({ animate: false, swap: true });
     }
-    // On single-column layouts the forecast sits below the hero, so bring the hero into view
     if (window.matchMedia("(max-width: 1024px)").matches) {
       document.querySelector(".block-now").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
     }
   }
-  $("backNowBtn").addEventListener("click", () => selectDay(0));
 
-  // Live local time for the searched city
+  forecastList.addEventListener("click", (e) => {
+    const row = e.target.closest(".forecast-item[data-i]");
+    if (row) selectDay(+row.dataset.i);
+  });
+  backNowBtn.addEventListener("click", () => selectDay(0));
+
   function updateLocalTime() {
-    if (!current || selectedDay !== 0) return;
+    if (!current || selectedDay !== 0 || document.hidden) return;
     const tz = current.data.timezone;
     const now = new Date();
     try {
       const date = now.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: tz });
       const time = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: tz });
-      setText("localTime", `${date} · ${time}`);
+      put(localTimeEl, `${date} · ${time}`);
     } catch (_) {
-      setText("localTime", timeNow());
+      put(localTimeEl, timeNow());
     }
   }
+
   (function tickClock() {
     updateLocalTime();
     setTimeout(tickClock, 60000 - (Date.now() % 60000) + 50);
   })();
+  document.addEventListener("visibilitychange", updateLocalTime);
 
-  // =========================================
-  // TOOLBAR CONTROLS
-  // =========================================
-  function setUnit(next) {
-    unit = next;
+  function applyUnitUI() {
     unitButtons.forEach((btn) => {
-      const on = btn.dataset.unit === next;
+      const on = btn.dataset.unit === unit;
       btn.classList.toggle("active", on);
       btn.setAttribute("aria-pressed", String(on));
     });
+  }
+
+  function setUnit(next) {
+    if (next === unit) return;
+    unit = next;
+    applyUnitUI();
     try {
       localStorage.setItem("yw-unit", next);
-    } catch (_) { /* storage blocked */ }
-    render({ animate: false }); // no refetch, no re-stagger
+    } catch (_) {}
+    render({ animate: false });
   }
 
   unitButtons.forEach((btn) => {
@@ -699,45 +694,34 @@ document.addEventListener("DOMContentLoaded", () => {
         name: "My Location"
       }),
       () => setStatus("Location access denied.", true),
-      { timeout: 8000 }
+      { timeout: 8000, maximumAge: 300000 }
     );
   });
 
-  // =========================================
-  // HOURLY STRIP: buttons + drag to scroll
-  // =========================================
   $("hourPrev").addEventListener("click", () =>
     hourlyScroll.scrollBy({ left: -hourlyScroll.clientWidth * 0.8, behavior: "smooth" }));
   $("hourNext").addEventListener("click", () =>
     hourlyScroll.scrollBy({ left: hourlyScroll.clientWidth * 0.8, behavior: "smooth" }));
 
-  let dragging = false;
-  let dragStartX = 0;
-  let dragStartLeft = 0;
-
-  hourlyScroll.addEventListener("pointerdown", (e) => {
-    if (e.pointerType !== "mouse" || e.button !== 0) return; // touch scrolls natively
-    dragging = true;
-    dragStartX = e.clientX;
-    dragStartLeft = hourlyScroll.scrollLeft;
-    hourlyScroll.classList.add("dragging");
-  });
-  window.addEventListener("pointermove", (e) => {
-    if (!dragging) return;
-    hourlyScroll.scrollLeft = dragStartLeft - (e.clientX - dragStartX);
-  });
+  let drag = null;
   const endDrag = () => {
-    dragging = false;
+    drag = null;
     hourlyScroll.classList.remove("dragging");
   };
-  window.addEventListener("pointerup", endDrag);
-  window.addEventListener("pointercancel", endDrag);
 
-  // =========================================
-  // INIT
-  // =========================================
-  refreshIcons();
-  renderSkeleton();
-  setUnit(unit);
+  hourlyScroll.addEventListener("pointerdown", (e) => {
+    if (e.pointerType !== "mouse" || e.button !== 0) return;
+    drag = { x: e.clientX, left: hourlyScroll.scrollLeft };
+    hourlyScroll.setPointerCapture(e.pointerId);
+    hourlyScroll.classList.add("dragging");
+  });
+  hourlyScroll.addEventListener("pointermove", (e) => {
+    if (drag) hourlyScroll.scrollLeft = drag.left - (e.clientX - drag.x);
+  }, { passive: true });
+  hourlyScroll.addEventListener("pointerup", endDrag);
+  hourlyScroll.addEventListener("pointercancel", endDrag);
+  hourlyScroll.addEventListener("lostpointercapture", endDrag);
+
+  applyUnitUI();
   loadWeather({ lat: 31.5204, lon: 74.3587, name: "Lahore" });
-});
+})();
