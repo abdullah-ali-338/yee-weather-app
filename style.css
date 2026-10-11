@@ -1,41 +1,37 @@
-/* =========================================
-   TYPED PROPERTIES (lets the background colors animate between themes)
-   ========================================= */
 @property --bg1 { syntax: '<color>'; inherits: true; initial-value: #020617; }
 @property --bg2 { syntax: '<color>'; inherits: true; initial-value: #0f172a; }
 @property --bg3 { syntax: '<color>'; inherits: true; initial-value: #1e1b4b; }
 @property --bg4 { syntax: '<color>'; inherits: true; initial-value: #000000; }
+@property --blob1 { syntax: '<color>'; inherits: true; initial-value: #3b82f6; }
+@property --blob2 { syntax: '<color>'; inherits: true; initial-value: #6366f1; }
+@property --blob3 { syntax: '<color>'; inherits: true; initial-value: #8b5cf6; }
 
-/* =========================================
-   BASE & VARIABLES
-   ========================================= */
 :root {
   --text-main: #ffffff;
   --text-muted: #94a3b8;
   --accent: #60a5fa;
   --danger: #f87171;
-  --glass-bg: rgba(255, 255, 255, 0.04);
+  --glass-bg: rgba(255, 255, 255, 0.05);
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --gutter: 40px;
   --side-col: 420px;
   --gap: 30px;
   --hpad: 20px;
+  --hour-h: 138px;
   color-scheme: dark;
 
-  /* Default theme: clear night */
   --bg1: #020617; --bg2: #0f172a; --bg3: #1e1b4b; --bg4: #000000;
   --blob1: #3b82f6; --blob2: #6366f1; --blob3: #8b5cf6;
 }
 
-/* Weather-reactive themes */
-body[data-theme="clear-day"]   { --bg1:#0b1d3a; --bg2:#12386b; --bg3:#1d4f91; --bg4:#0a1a33; --blob1:#3b82f6; --blob2:#0ea5e9; --blob3:#f59e0b; }
-body[data-theme="clear-night"] { --bg1:#020617; --bg2:#0f172a; --bg3:#1e1b4b; --bg4:#000000; --blob1:#3b82f6; --blob2:#6366f1; --blob3:#8b5cf6; }
-body[data-theme="cloudy-day"]  { --bg1:#111827; --bg2:#1f2937; --bg3:#334155; --bg4:#0f172a; --blob1:#64748b; --blob2:#475569; --blob3:#3b82f6; }
-body[data-theme="cloudy-night"]{ --bg1:#030712; --bg2:#0f172a; --bg3:#1e293b; --bg4:#000000; --blob1:#334155; --blob2:#475569; --blob3:#4f46e5; }
-body[data-theme="rain"]        { --bg1:#0b1220; --bg2:#13233a; --bg3:#1e3a5f; --bg4:#060b14; --blob1:#2563eb; --blob2:#0e7490; --blob3:#475569; }
-body[data-theme="snow"]        { --bg1:#1b2a41; --bg2:#2a3f5f; --bg3:#3d5a80; --bg4:#16233a; --blob1:#93c5fd; --blob2:#bfdbfe; --blob3:#60a5fa; }
-body[data-theme="storm"]       { --bg1:#0a0a14; --bg2:#1a1a2e; --bg3:#2d1b4e; --bg4:#000000; --blob1:#4c1d95; --blob2:#1d4ed8; --blob3:#6d28d9; }
-body[data-theme="fog"]         { --bg1:#1e2430; --bg2:#2c3441; --bg3:#3c4656; --bg4:#161b24; --blob1:#94a3b8; --blob2:#64748b; --blob3:#78716c; }
+body[data-theme="clear-day"]    { --bg1:#0b1d3a; --bg2:#12386b; --bg3:#1d4f91; --bg4:#0a1a33; --blob1:#3b82f6; --blob2:#0ea5e9; --blob3:#f59e0b; }
+body[data-theme="clear-night"]  { --bg1:#020617; --bg2:#0f172a; --bg3:#1e1b4b; --bg4:#000000; --blob1:#3b82f6; --blob2:#6366f1; --blob3:#8b5cf6; }
+body[data-theme="cloudy-day"]   { --bg1:#111827; --bg2:#1f2937; --bg3:#334155; --bg4:#0f172a; --blob1:#64748b; --blob2:#475569; --blob3:#3b82f6; }
+body[data-theme="cloudy-night"] { --bg1:#030712; --bg2:#0f172a; --bg3:#1e293b; --bg4:#000000; --blob1:#334155; --blob2:#475569; --blob3:#4f46e5; }
+body[data-theme="rain"]         { --bg1:#0b1220; --bg2:#13233a; --bg3:#1e3a5f; --bg4:#060b14; --blob1:#2563eb; --blob2:#0e7490; --blob3:#475569; }
+body[data-theme="snow"]         { --bg1:#1b2a41; --bg2:#2a3f5f; --bg3:#3d5a80; --bg4:#16233a; --blob1:#93c5fd; --blob2:#bfdbfe; --blob3:#60a5fa; }
+body[data-theme="storm"]        { --bg1:#0a0a14; --bg2:#1a1a2e; --bg3:#2d1b4e; --bg4:#000000; --blob1:#4c1d95; --blob2:#1d4ed8; --blob3:#6d28d9; }
+body[data-theme="fog"]          { --bg1:#1e2430; --bg2:#2c3441; --bg3:#3c4656; --bg4:#161b24; --blob1:#94a3b8; --blob2:#64748b; --blob3:#78716c; }
 
 * {
   margin: 0;
@@ -43,25 +39,26 @@ body[data-theme="fog"]         { --bg1:#1e2430; --bg2:#2c3441; --bg3:#3c4656; --
   box-sizing: border-box;
 }
 
-body,
-button,
-input {
-  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+html {
+  background: #020617;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
-
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 
 body {
   min-height: 100vh;
-  min-height: 100dvh;
-  color: var(--text-main);
-  overflow-x: hidden;
-  background-color: #020617;
-  font-variant-numeric: tabular-nums;
-  -webkit-font-smoothing: antialiased;
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
+  color: var(--text-main);
+  overflow-x: clip;
+  background-color: #020617;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
 }
+
+input { font-family: inherit; }
 
 button {
   font: inherit;
@@ -78,62 +75,69 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
-/* =========================================
-   LIVE LIQUID BACKGROUND
-   ========================================= */
-.bg-animation {
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  background: linear-gradient(-45deg, var(--bg1), var(--bg2), var(--bg3), var(--bg4));
-  background-size: 400% 400%;
-  animation: gradientBG 15s ease infinite;
-  transition: --bg1 1.6s var(--ease), --bg2 1.6s var(--ease), --bg3 1.6s var(--ease), --bg4 1.6s var(--ease);
+.ic {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-@keyframes gradientBG {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+/* No backdrop-filter anywhere: it re-blurs every frame over animated layers and is the main cause of scroll jank on iOS. */
+
+.bg,
+.focus-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100lvh;
 }
+
+.bg {
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  contain: strict;
+  background: linear-gradient(160deg, var(--bg1) 0%, var(--bg2) 40%, var(--bg3) 80%, var(--bg4) 100%);
+}
+
+body.ready .bg {
+  transition: --bg1 1s var(--ease), --bg2 1s var(--ease), --bg3 1s var(--ease), --bg4 1s var(--ease);
+}
+body.ready .blob-1 { transition: --blob1 1s var(--ease); }
+body.ready .blob-2 { transition: --blob2 1s var(--ease); }
+body.ready .blob-3 { transition: --blob3 1s var(--ease); }
 
 .blob {
-  position: fixed;
+  position: absolute;
   border-radius: 50%;
-  filter: blur(90px);
-  z-index: -1;
-  opacity: 0.5;
-  animation: float 12s infinite alternate cubic-bezier(0.45, 0.05, 0.55, 0.95);
+  opacity: 0.6;
   will-change: transform;
-  transition: background-color 1.6s var(--ease);
+  animation: float 12s infinite alternate cubic-bezier(0.45, 0.05, 0.55, 0.95);
 }
-.blob-1 { top: 5%; left: 5%; width: 400px; height: 400px; background-color: var(--blob1); }
-.blob-2 { bottom: 5%; right: 10%; width: 500px; height: 500px; background-color: var(--blob2); animation-delay: -4s; }
-.blob-3 { top: 40%; left: 40%; width: 300px; height: 300px; background-color: var(--blob3); animation-delay: -8s; }
+.blob-1 { top: 0; left: 0; width: 520px; height: 520px; background: radial-gradient(closest-side, var(--blob1), transparent); }
+.blob-2 { bottom: 0; right: 5%; width: 650px; height: 650px; background: radial-gradient(closest-side, var(--blob2), transparent); animation-delay: -4s; }
+.blob-3 { top: 35%; left: 35%; width: 400px; height: 400px; background: radial-gradient(closest-side, var(--blob3), transparent); animation-delay: -8s; }
 
 @keyframes float {
-  0% { transform: translate(0, 0) scale(1); }
-  100% { transform: translate(50px, 50px) scale(1.1); }
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(50px, 50px, 0) scale(1.1); }
 }
 
-/* =========================================
-   GLASS (with thin inner highlight)
-   ========================================= */
 .glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: none;
   border-radius: 28px;
   box-shadow:
-    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    0 20px 40px -16px rgba(0, 0, 0, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.10),
     inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
-/* =========================================
-   NAVBAR
-   ========================================= */
 .navbar {
   position: absolute;
   top: 30px;
@@ -163,10 +167,6 @@ button:focus-visible {
   color: var(--text-muted);
 }
 
-/* =========================================
-   SEARCH BAR
-   Resting edge lines up with the dashboard's right edge at any width.
-   ========================================= */
 .search-wrapper {
   position: absolute;
   top: 30px;
@@ -174,6 +174,7 @@ button:focus-visible {
   width: 320px;
   height: 48px;
   z-index: 100;
+  contain: layout style;
   transition:
     top 0.6s var(--ease),
     left 0.6s var(--ease),
@@ -191,27 +192,24 @@ button:focus-visible {
 .search-box {
   width: 100%;
   height: 100%;
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-radius: 32px;
   display: flex;
   align-items: center;
   padding: 0 20px;
+  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.07);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
   transition: background 0.3s var(--ease), box-shadow 0.3s var(--ease);
 }
 
 .search-wrapper.active .search-box {
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 0 40px rgba(59, 130, 246, 0.2), 0 20px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  background: rgba(30, 41, 59, 0.96);
+  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.28), 0 16px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 .search-box svg {
   width: 20px;
   height: 20px;
   color: var(--text-muted);
-  flex-shrink: 0;
   transition: color 0.3s var(--ease), width 0.3s var(--ease), height 0.3s var(--ease);
 }
 .search-wrapper.active .search-box svg { color: #fff; width: 24px; height: 24px; }
@@ -230,7 +228,6 @@ button:focus-visible {
 .search-wrapper.active .search-box input { font-size: 1.25rem; }
 .search-box input::placeholder { color: var(--text-muted); }
 
-/* Dropdown */
 .dropdown {
   position: absolute;
   top: calc(100% + 12px);
@@ -238,8 +235,11 @@ button:focus-visible {
   width: 100%;
   max-height: 360px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   border-radius: 20px;
   padding: 8px 0;
+  background: rgba(15, 23, 42, 0.97);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.10);
   opacity: 0;
   visibility: hidden;
   transform: translateY(-10px);
@@ -283,25 +283,17 @@ button:focus-visible {
   font-size: 0.95rem;
   color: var(--text-muted);
 }
-.dropdown-empty svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--accent); }
+.dropdown-empty svg { width: 18px; height: 18px; color: var(--accent); }
 
-/* Focus overlay */
 .focus-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   z-index: 90;
+  background: rgba(2, 6, 23, 0.82);
   opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.6s ease;
+  visibility: hidden;
+  transition: opacity 0.4s ease, visibility 0.4s;
 }
-.focus-overlay.active { opacity: 1; pointer-events: auto; }
+.focus-overlay.active { opacity: 1; visibility: visible; }
 
-/* =========================================
-   DASHBOARD GRID
-   ========================================= */
 .dashboard {
   width: 100%;
   flex: 1 0 auto;
@@ -320,12 +312,12 @@ button:focus-visible {
   align-content: start;
 }
 
-.toolbar      { grid-area: toolbar; }
-.block-now    { grid-area: now; }
+.toolbar          { grid-area: toolbar; }
+.block-now        { grid-area: now; }
 .block-conditions { grid-area: conditions; }
 .block-forecast   { grid-area: forecast; }
-.block-hourly { grid-area: hourly; }
-/* Error state hides everything except toolbar + the state card */
+.block-hourly     { grid-area: hourly; }
+
 .dashboard.has-error {
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
@@ -335,7 +327,6 @@ button:focus-visible {
 .dashboard.has-error > .block { display: none; }
 .dashboard.has-error > .state-card { grid-area: state; }
 
-/* Each section: label on top, glass card fills the rest */
 .block {
   display: flex;
   flex-direction: column;
@@ -360,8 +351,14 @@ button:focus-visible {
   text-transform: uppercase;
   color: var(--text-muted);
   white-space: nowrap;
-  margin-right: -0.14em; /* cancel trailing letter-spacing */
+  margin-right: -0.14em;
 }
+.section-head .line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0));
+}
+
 .mini-btn {
   display: inline-flex;
   align-items: center;
@@ -381,15 +378,6 @@ button:focus-visible {
 
 .swap { animation: rise 0.35s var(--ease) backwards; }
 
-.section-head .line {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0));
-}
-
-/* =========================================
-   TOOLBAR
-   ========================================= */
 .toolbar {
   display: flex;
   justify-content: space-between;
@@ -449,9 +437,6 @@ button:focus-visible {
 .unit-btn:hover { color: #fff; }
 .unit-btn.active { background: #fff; color: #020617; }
 
-/* =========================================
-   CURRENT WEATHER CARD
-   ========================================= */
 .current-card {
   padding: 40px;
   display: flex;
@@ -476,7 +461,7 @@ button:focus-visible {
   height: 72px;
   stroke-width: 1.5;
   color: #fff;
-  filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.4));
+  filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.35));
 }
 
 .city-block {
@@ -501,7 +486,7 @@ button:focus-visible {
   border-radius: 18px;
 }
 .card-city span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.card-city svg { width: 16px; height: 16px; color: var(--accent); flex-shrink: 0; }
+.card-city svg { width: 16px; height: 16px; color: var(--accent); }
 
 .local-time {
   display: flex;
@@ -550,14 +535,11 @@ button:focus-visible {
   max-width: 44ch;
   font-size: 0.95rem;
   line-height: 1.5;
-  min-height: 3em; /* always 2 lines so the card never changes height */
+  min-height: 3em;
   text-wrap: pretty;
   color: #cbd5e1;
 }
 
-/* =========================================
-   METRICS (6 cards, each with a gauge)
-   ========================================= */
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -571,12 +553,13 @@ button:focus-visible {
   flex-direction: column;
   gap: 10px;
   min-width: 0;
+  contain: layout style;
   transition: transform 0.3s var(--ease), background 0.3s var(--ease);
 }
 .metric-card:hover { transform: translateY(-4px); background: rgba(255, 255, 255, 0.07); }
 
 .metric-top { display: flex; align-items: center; gap: 8px; }
-.metric-icon { width: 18px; height: 18px; color: var(--accent); flex-shrink: 0; }
+.metric-icon { width: 18px; height: 18px; color: var(--accent); }
 .metric-label {
   font-size: 0.7rem;
   font-weight: 600;
@@ -601,11 +584,12 @@ button:focus-visible {
 }
 .gauge span {
   display: block;
+  width: 100%;
   height: 100%;
-  width: 0;
-  border-radius: inherit;
   background: linear-gradient(90deg, rgba(96, 165, 250, 0.55), var(--accent));
-  transition: width 0.9s var(--ease);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.9s var(--ease);
 }
 
 .metric-sub {
@@ -626,9 +610,6 @@ button:focus-visible {
 }
 .wind-arrow svg { width: 100%; height: 100%; }
 
-/* =========================================
-   7-DAY FORECAST
-   ========================================= */
 .forecast-card {
   padding: 12px;
   display: flex;
@@ -655,6 +636,7 @@ button:focus-visible {
   text-align: left;
   color: inherit;
   cursor: pointer;
+  contain: layout style;
   transition: background 0.25s var(--ease), box-shadow 0.25s var(--ease);
 }
 .forecast-item:hover {
@@ -679,7 +661,7 @@ button:focus-visible {
 }
 
 .f-mid { display: flex; align-items: center; gap: 8px; }
-.f-icon { width: 20px; height: 20px; flex-shrink: 0; color: #fff; }
+.f-icon { width: 20px; height: 20px; color: #fff; }
 .f-pop { width: 34px; font-size: 0.72rem; font-weight: 600; color: var(--accent); }
 .f-temps {
   justify-self: end;
@@ -689,22 +671,17 @@ button:focus-visible {
 }
 .f-temps b { color: var(--text-main); font-weight: 600; }
 
-/* =========================================
-   HOURLY STRIP
-   ========================================= */
-.hourly-card { padding: 0; overflow: hidden; }
+.hourly-card { padding: 0; }
 
 .hourly-scroll {
   padding: 20px 0;
   overflow-x: auto;
+  overflow-y: hidden;
   scroll-snap-type: x proximity;
   scroll-padding-left: var(--hpad);
   scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
   cursor: grab;
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--hpad), #000 calc(100% - 40px), transparent);
-  mask-image: linear-gradient(to right, transparent, #000 var(--hpad), #000 calc(100% - 40px), transparent);
 }
 .hourly-scroll::-webkit-scrollbar { display: none; }
 .hourly-scroll.dragging { cursor: grabbing; scroll-snap-type: none; user-select: none; }
@@ -713,6 +690,7 @@ button:focus-visible {
   display: flex;
   gap: 10px;
   width: max-content;
+  min-height: var(--hour-h);
   padding: 0 40px 0 var(--hpad);
 }
 
@@ -727,6 +705,7 @@ button:focus-visible {
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.04);
   scroll-snap-align: start;
+  contain: content;
   transition: background 0.2s var(--ease), transform 0.2s var(--ease);
 }
 .hour-item:hover { background: rgba(255, 255, 255, 0.09); transform: translateY(-3px); }
@@ -752,32 +731,24 @@ button:focus-visible {
 .scroll-btn svg { width: 16px; height: 16px; }
 @media (hover: none) { .scroll-btns { display: none; } }
 
-/* =========================================
-   STAGGERED ENTRANCE
-   ========================================= */
 @keyframes rise {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translate3d(0, 12px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 .anim {
   animation: rise 0.5s var(--ease) backwards;
   animation-delay: calc(var(--i, 0) * 45ms);
 }
 
-/* =========================================
-   SKELETON LOADING
-   ========================================= */
-@keyframes shimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+@keyframes pulse {
+  50% { opacity: 0.45; }
 }
 
 .skel,
 .is-loading [data-skel] {
-  background: linear-gradient(90deg, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.06) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s linear infinite;
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 10px;
+  animation: pulse 1.4s ease-in-out infinite;
 }
 .skel { display: block; }
 
@@ -787,7 +758,6 @@ button:focus-visible {
 }
 .is-loading [data-skel] * { visibility: hidden; }
 
-/* Give skeleton blocks a believable size */
 .is-loading .temp-main[data-skel]      { min-width: 8.5rem; border-radius: 18px; }
 .is-loading .condition-text[data-skel] { min-width: 9rem; }
 .is-loading .summary[data-skel]        { width: min(44ch, 100%); min-height: 3em; }
@@ -795,15 +765,12 @@ button:focus-visible {
 .is-loading .metric-sub[data-skel]     { min-width: 6rem; }
 .is-loading .local-time [data-skel]    { min-width: 9rem; }
 .is-loading .weather-icon-large        { opacity: 0.25; }
-.is-loading .gauge span                { width: 0 !important; }
+.is-loading .gauge span                { transform: scaleX(0) !important; }
 .is-loading .metric-value[data-skel],
 .is-loading .metric-sub[data-skel]     { align-self: flex-start; }
 .is-loading .hour-item,
 .is-loading .forecast-item             { pointer-events: none; }
 
-/* =========================================
-   ERROR / EMPTY STATE
-   ========================================= */
 .state-card {
   display: flex;
   flex-direction: column;
@@ -818,9 +785,6 @@ button:focus-visible {
 .state-card h3 { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.5px; text-wrap: balance; }
 .state-card p { max-width: 40ch; font-size: 0.95rem; line-height: 1.5; color: var(--text-muted); margin-bottom: 8px; }
 
-/* =========================================
-   FOOTER
-   ========================================= */
 .footer {
   width: 100%;
   flex-shrink: 0;
@@ -839,10 +803,6 @@ button:focus-visible {
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* =========================================
-   TABLET & BELOW (<=1024px)
-   Desktop layout above is untouched.
-   ========================================= */
 @media (max-width: 1024px) {
   .dashboard {
     grid-template-columns: minmax(0, 1fr);
@@ -856,24 +816,18 @@ button:focus-visible {
   .forecast-item { min-height: 60px; }
 }
 
-/* =========================================
-   NARROW DESKTOP (1025-1180px)
-   Keeps the 3 metric columns from crowding.
-   ========================================= */
 @media (min-width: 1025px) and (max-width: 1180px) {
   :root { --side-col: 360px; }
   .metric-card { padding: 18px; }
   .metric-value { font-size: 1.3rem; }
 }
 
-/* =========================================
-   MOBILE (<=768px)
-   ========================================= */
 @media (max-width: 768px) {
   :root {
     --gutter: max(16px, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
     --gap: 20px;
     --hpad: 16px;
+    --hour-h: 134px;
   }
 
   .navbar { top: calc(20px + env(safe-area-inset-top, 0px)); left: var(--gutter); }
@@ -917,7 +871,7 @@ button:focus-visible {
   .metric-value { font-size: 1.25rem; }
 
   .forecast-card { padding: 10px; }
-  .forecast-item { gap: 8px; padding: 0 18px; border-radius: 20px; }
+  .forecast-item { gap: 8px; padding: 0 18px; }
   .mini-btn { height: 32px; }
 
   .hourly-scroll { padding: 16px 0; }
@@ -927,17 +881,15 @@ button:focus-visible {
 
   .footer { flex-direction: column; align-items: center; text-align: center; padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px)); }
 
-  .blob { filter: blur(60px); }
-  .blob-2 { width: 300px; height: 300px; }
-  .blob-3 { width: 220px; height: 220px; }
+  .blob-1 { width: 340px; height: 340px; }
+  .blob-2 { width: 400px; height: 400px; }
+  .blob-3 { width: 300px; height: 300px; }
 }
 
-/* Larger phones / small tablets: 3 metric columns fit */
 @media (min-width: 560px) and (max-width: 768px) {
   .metrics-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
-/* Touch devices: no sticky hover states after a tap */
 @media (hover: none) {
   .pill-btn:hover { background: rgba(255, 255, 255, 0.1); transform: none; }
   .pill-btn.primary:hover { background: var(--accent); }
@@ -948,7 +900,6 @@ button:focus-visible {
   .forecast-item:not(.is-selected):hover { background: transparent; box-shadow: none; }
 }
 
-/* Very small phones */
 @media (max-width: 380px) {
   .brand { font-size: 1.2rem; }
   .temp-main { font-size: 4rem; }
@@ -963,7 +914,6 @@ button:focus-visible {
   .f-temps { font-size: 0.88rem; }
 }
 
-/* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
