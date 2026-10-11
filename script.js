@@ -11,6 +11,7 @@
   const statusText = $("statusText");
   const locateBtn = $("locateBtn");
   const refreshBtn = $("refreshBtn");
+  const installBtn = $("installBtn");
   const retryBtn = $("retryBtn");
   const stateCard = $("stateCard");
   const stateMsg = $("stateMsg");
@@ -67,6 +68,7 @@
   let selectedDay = 0;
   let lastRequest = null;
   let weatherToken = 0;
+  let lastFetch = 0;
   let searchToken = 0;
   let weatherCtl = null;
   let searchCtl = null;
@@ -170,10 +172,24 @@
   ].forEach(([theme, codes]) => codes.forEach((c) => THEME_BY_CODE.set(c, theme)));
 
   function themeFor(code, isDay) {
-    const t = THEME_BY_CODE.get(code);
-    if (t) return t;
-    if (code <= 1) return isDay ? "clear-day" : "clear-night";
-    return isDay ? "cloudy-day" : "cloudy-night";
+    const t = THEME_BY_CODE.get(code) || (code <= 1 ? "clear" : "cloudy");
+    return `${t}-${isDay ? "day" : "night"}`;
+  }
+
+  const THEME_COLOR = {
+    "clear-day": "#2a7bd1", "clear-night": "#020617",
+    "cloudy-day": "#5b7189", "cloudy-night": "#030712",
+    "rain-day": "#3f6178", "rain-night": "#0b1220",
+    "snow-day": "#6c9bc9", "snow-night": "#1b2a41",
+    "storm-day": "#443f63", "storm-night": "#0a0a14",
+    "fog-day": "#78838f", "fog-night": "#1e2430"
+  };
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+
+  function setTheme(theme) {
+    if (document.body.dataset.theme === theme) return;
+    document.body.dataset.theme = theme;
+    metaTheme.content = THEME_COLOR[theme];
   }
 
   function buildSummary(cur, theme) {
@@ -430,6 +446,10 @@
 
       selectedDay = 0;
       current = { name, lat, lon, data };
+      lastFetch = Date.now();
+      try {
+        localStorage.setItem("yw-last", JSON.stringify({ ...current, at: lastFetch }));
+      } catch (_) {}
       render({ animate: !sameCity });
       setStatus(`Updated ${timeNow()}`);
       put(footerUpdated, `Last updated ${timeNow()}`);
@@ -501,7 +521,7 @@
 
     const info = getWeatherDetails(cur.weather_code, cur.is_day);
     const theme = themeFor(cur.weather_code, cur.is_day);
-    if (document.body.dataset.theme !== theme) document.body.dataset.theme = theme;
+    setTheme(theme);
 
     put(cityEl, name);
     animateNumber(mainTemp, toTemp(cur.temperature_2m), "°", animate || swap);
@@ -653,7 +673,10 @@
     updateLocalTime();
     setTimeout(tickClock, 60000 - (Date.now() % 60000) + 50);
   })();
-  document.addEventListener("visibilitychange", updateLocalTime);
+  document.addEventListener("visibilitychange", () => {
+    updateLocalTime();
+    if (!document.hidden && lastRequest && Date.now() - lastFetch > 600000) loadWeather(lastRequest);
+  });
 
   function applyUnitUI() {
     unitButtons.forEach((btn) => {
@@ -722,6 +745,48 @@
   hourlyScroll.addEventListener("pointercancel", endDrag);
   hourlyScroll.addEventListener("lostpointercapture", endDrag);
 
+  let installEvent = null;
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    installEvent = e;
+    installBtn.hidden = false;
+  });
+  window.addEventListener("appinstalled", () => {
+    installEvent = null;
+    installBtn.hidden = true;
+  });
+  installBtn.addEventListener("click", async () => {
+    if (!installEvent) return;
+    installEvent.prompt();
+    await installEvent.userChoice;
+    installEvent = null;
+    installBtn.hidden = true;
+  });
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  }
+
+  function restoreLast() {
+    let saved = null;
+    try {
+      saved = JSON.parse(localStorage.getItem("yw-last"));
+    } catch (_) {}
+
+    if (saved && saved.data && saved.data.current && saved.data.daily && saved.data.hourly) {
+      current = { name: saved.name, lat: saved.lat, lon: saved.lon, data: saved.data };
+      lastFetch = saved.at || 0;
+      render({ animate: false });
+      dashboard.classList.remove("is-loading");
+      put(footerUpdated, saved.at
+        ? `Last updated ${new Date(saved.at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`
+        : "Not updated yet");
+      loadWeather({ lat: saved.lat, lon: saved.lon, name: saved.name });
+    } else {
+      loadWeather({ lat: 31.5204, lon: 74.3587, name: "Lahore" });
+    }
+  }
+
   applyUnitUI();
-  loadWeather({ lat: 31.5204, lon: 74.3587, name: "Lahore" });
+  restoreLast();
 })();
